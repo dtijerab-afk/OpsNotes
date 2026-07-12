@@ -719,6 +719,29 @@
         btn.disabled = true;
         btn.innerHTML = 'Enviando…';
 
+        // Pendientes va a una base distinta: una fila por tarea, no un resumen en bloque
+        if (!isDailySummary && currentMode === 'pendientes') {
+            const tasks = notes.filter(n => n.mode === 'pendientes').map(n => ({ text: n.text, category: n.category }));
+            try {
+                const params = new URLSearchParams({ tasks: JSON.stringify(tasks) });
+                const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
+                const data = await response.json();
+                if (data.ok) {
+                    showToast('✅ ' + data.count + ' tarea' + (data.count !== 1 ? 's' : '') + ' enviada' + (data.count !== 1 ? 's' : '') + ' a Cosas por hacer');
+                } else {
+                    showToast('⚠️ Algunas tareas no se pudieron enviar');
+                    console.error('Notion tasks error', data);
+                }
+            } catch (err) {
+                showToast('⚠️ Error al conectar con el puente de Notion');
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+            return;
+        }
+
         const now = new Date();
         const dateISO = now.toISOString().split('T')[0];
         const dateLabel = now.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
