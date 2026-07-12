@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpsNotes — Notas de Operaciones</title>
+    <script>
+        // Promesa que se resuelve cuando Firebase termina de inicializar
+        window.__fbReady = new Promise(resolve => { window.__fbReadyResolve = resolve; });
+    </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7UqxGynm7oPVZlczmD8IARYnST8haENk",
+            authDomain: "opsnotes-mega.firebaseapp.com",
+            projectId: "opsnotes-mega",
+            storageBucket: "opsnotes-mega.firebasestorage.app",
+            messagingSenderId: "483608190779",
+            appId: "1:483608190779:web:40dcb3202626c12de9e11e"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            window.__fbReadyResolve({ db, doc, getDoc, setDoc });
+        } catch (e) {
+            console.error('Error inicializando Firebase', e);
+            window.__fbReadyResolve(null);
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.8/index.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1a56db;
+            --primary-light: #3b82f6;
+            --primary-dark: #1e40af;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --neutral: #6b7280;
+            --neutral-bg: #f3f4f6;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 100px; }
+        .header { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-lg); }
+        .header-top { display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .header-subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+        .note-count { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+        .mode-btn { padding: 12px 8px; border: 2px solid var(--border); border-radius: 12px; background: var(--card); cursor: pointer; text-align: center; transition: all 0.2s; font-size: 0.75rem; font-weight: 600; color: var(--text-light); font-family: inherit; }
+        .mode-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+        .mode-btn svg { display: block; margin: 0 auto 6px; width: 28px; height: 28px; }
+        .mode-btn.active svg { stroke: var(--primary); }
+
+        .store-info { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); display: none; }
+        .store-info.visible { display: block; }
+        .store-info label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px; }
+        .select-wrapper { position: relative; margin-bottom: 12px; }
+        .store-select {
+            width: 100%;
+            padding: 12px 40px 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card);
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text);
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color 0.2s;
+        }
+        .store-select:focus { outline: none; border-color: var(--primary-light); }
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid var(--text-light);
+            pointer-events: none;
+        }
+        .custom-store-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            margin-top: 4px;
+            display: none;
+        }
+        .custom-store-input.visible { display: block; }
+        .custom-store-input:focus { outline: none; border-color: var(--primary-light); }
+        .store-info input[type="text"] { width: 100%; padding: 10px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s; }
+        .store-info input[type="text"]:focus { outline: none; border-color: var(--primary-light); }
+
+        .input-section { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); position: sticky; top: 80px; z-index: 50; }
+        .sentiment-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .sentiment-btn { flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer; font-size: 0.72rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; color: var(--text-light); font-family: inherit; }
+        .sentiment-btn.active-positive { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+        .sentiment-btn.active-negative { border-color: var(--warning); background: var(--warning-bg); color: var(--warning); }
+        .sentiment-btn.active-neutral { border-color: var(--neutral); background: var(--neutral-bg); color: var(--neutral); }
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .text-input { flex: 1; padding: 12px 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 0.9rem; font-family: inherit; resize: none; min-height: 48px; max-height: 120px; transition: border-color 0.2s; line-height: 1.4; }
+        .text-input:focus { outline: none; border-color: var(--primary-light); }
+        .action-btns { display: flex; flex-direction: column; gap: 6px; }
+        .voice-btn, .add-btn { width: 48px; height: 48px; border-radius: 12px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .voice-btn { background: var(--neutral-bg); color: var(--neutral); }
+        .voice-btn.recording { background: var(--danger); color: white; animation: pulse 1.5s infinite; }
+        .add-btn { background: var(--primary); color: white; }
+        .add-btn:hover { background: var(--primary-dark); }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); } 50% { box-shadow: 0 0 0 10px rgba(220,38,38,0); } }
+        .notes-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .note-card { background: var(--card); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); border-left: 4px solid transparent; animation: slideIn 0.3s ease; position: relative; }
+        .note-card.positive { border-left-color: var(--success); }
+        .note-card.negative { border-left-color: var(--warning); }
+        .note-card.neutral { border-left-color: var(--neutral); }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .note-badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 4px; }
+        .note-badge.positive { background: var(--success-bg); color: var(--success); }
+        .note-badge.negative { background: var(--warning-bg); color: var(--warning); }
+        .note-badge.neutral { background: var(--neutral-bg); color: var(--neutral); }
+        .note-time { font-size: 0.7rem; color: var(--text-light); }
+        .note-text { font-size: 0.9rem; line-height: 1.5; color: var(--text); padding-right: 20px; }
+        .note-delete { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-light); cursor: pointer; opacity: 0.4; font-size: 1.1rem; padding: 4px; transition: opacity 0.2s; }
+        .note-delete:hover { opacity: 1; color: var(--danger); }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; z-index: 100; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05); }
+        .bottom-bar .btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; font-family: inherit; }
+        .btn-summary { background: var(--primary); color: white; }
+        .btn-summary:hover { background: var(--primary-dark); }
+        .btn-clear { background: var(--neutral-bg); color: var(--neutral); flex: 0.5; }
+        .btn-clear:hover { background: #e5e7eb; }
+        .btn-daily { background: #7c3aed; color: white; flex: 0.8; }
+        .btn-daily:hover { background: #6d28d9; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px); overflow-y: auto; }
+        .modal-overlay.visible { display: flex; }
+        .modal { background: var(--card); border-radius: 20px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modalIn 0.3s ease; margin: auto; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .modal-header { padding: 20px 24px 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 1.2rem; font-weight: 700; }
+        .modal-close { background: var(--neutral-bg); border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; color: var(--text-light); }
+        .modal-body { padding: 20px 24px; }
+        .summary-section { margin-bottom: 20px; }
+        .summary-section h3 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .summary-section h3.positive { color: var(--success); }
+        .summary-section h3.negative { color: var(--warning); }
+        .summary-section h3.neutral { color: var(--neutral); }
+        .summary-item { padding: 8px 12px; background: var(--bg); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem; line-height: 1.4; }
+        .summary-meta { background: var(--bg); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+        .summary-meta p { font-size: 0.85rem; color: var(--text-light); margin-bottom: 4px; }
+        .summary-meta strong { color: var(--text); }
+        .share-section { background: var(--bg); border-radius: 12px; padding: 16px; margin: 0 24px 16px; }
+        .share-section label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px; }
+        .share-section input { width: 100%; padding: 10px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; transition: border-color 0.2s; }
+        .share-section input:focus { outline: none; border-color: #25d366; }
+        .share-section .hint { font-size: 0.7rem; color: var(--text-light); margin-top: 6px; }
+        .wa-link-area { margin: 0 24px 16px; padding: 16px; background: #dcf8c6; border-radius: 12px; text-align: center; }
+        .wa-link-area p { font-size: 0.8rem; color: #1a5c2e; margin-bottom: 12px; font-weight: 600; }
+        .wa-big-link { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #25d366; color: white !important; text-decoration: none !important; padding: 16px 32px; border-radius: 14px; font-size: 1rem; font-weight: 800; font-family: inherit; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37,211,102,0.4); width: 100%; }
+        .wa-big-link:hover { background: #1fb855; transform: translateY(-1px); }
+        .wa-big-link:active { transform: translateY(0); }
+        .wa-link-area .wa-fallback { margin-top: 10px; font-size: 0.7rem; color: #1a5c2e; opacity: 0.7; }
+        .share-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 24px 24px; }
+        .share-btn { padding: 14px; border-radius: 12px; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: all 0.2s; }
+        .share-email { background: var(--primary); color: white; }
+        .share-email:hover { background: var(--primary-dark); }
+        .share-native { background: #7c3aed; color: white; }
+        .share-native:hover { background: #6d28d9; }
+        .share-copy { background: var(--neutral-bg); color: var(--text); grid-column: 1 / -1; }
+        .share-copy:hover { background: #e5e7eb; }
+        .share-notion { background: #000000; color: white; }
+        .share-notion:hover { background: #262626; }
+        .share-notion:disabled { opacity: 0.6; cursor: not-allowed; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-state p { font-size: 0.9rem; }
+        .voice-status { text-align: center; font-size: 0.75rem; color: var(--danger); font-weight: 600; margin-top: 8px; display: none; }
+        .voice-status.visible { display: block; }
+        .stats-row { display: flex; gap: 8px; margin-bottom: 16px; }
+        .stat-card { flex: 1; background: var(--card); border-radius: 10px; padding: 12px; text-align: center; box-shadow: var(--shadow); }
+        .stat-number { font-size: 1.5rem; font-weight: 800; }
+        .stat-number.positive { color: var(--success); }
+        .stat-number.negative { color: var(--warning); }
+        .stat-number.neutral { color: var(--neutral); }
+        .stat-label { font-size: 0.65rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; }
+        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--text); color: white; padding: 12px 24px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; z-index: 300; transition: transform 0.3s ease; white-space: nowrap; max-width: 90%; text-align: center; }
+        .toast.visible { transform: translateX(-50%) translateY(0); }
+        @media (max-width: 400px) { .mode-btn { padding: 10px 4px; font-size: 0.65rem; } .mode-btn svg { width: 22px; height: 22px; } }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-top">
+        <div>
+            <h1>
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                OpsNotes
+            </h1>
+            <div class="header-subtitle">Notas de Operaciones — Megatiendas</div>
+        </div>
+        <div class="note-count" id="noteCount">0 notas</div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="mode-selector">
+        <button class="mode-btn active" data-mode="recorrido" onclick="setMode('recorrido')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Recorrido Tienda
+        </button>
+        <button class="mode-btn" data-mode="reunion" onclick="setMode('reunion')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            Reunión
+        </button>
+        <button class="mode-btn" data-mode="pendientes" onclick="setMode('pendientes')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Pendientes
+        </button>
+    </div>
+
+    <div class="store-info visible" id="storeInfo">
+        <label>🏪 Selecciona la Tienda</label>
+        <div class="select-wrapper">
+            <select class="store-select" id="storeSelect" onchange="handleStoreSelect()">
+                <option value="" disabled selected>— Elige una tienda —</option>
+                <option value="Único">Único</option>
+                <option value="Calle 30">Calle 30</option>
+                <option value="Soledad">Soledad</option>
+                <option value="Alkarawi">Alkarawi</option>
+                <option value="Bostón">Bostón</option>
+                <option value="Santo Tomás">Santo Tomás</option>
+                <option value="Nuestro">Nuestro</option>
+                <option value="Villacampestre">Villacampestre</option>
+                <option value="__custom__">✏️ Otra (escribir manualmente)</option>
+            </select>
+        </div>
+        <input type="text" class="custom-store-input" id="customStoreInput" placeholder="Escribe el nombre de la tienda...">
+        <div style="margin-top:12px">
+            <label>👤 Administrador</label>
+            <input type="text" id="managerName" placeholder="Ej: Carlos Rodríguez">
+        </div>
+    </div>
+
+    <div class="store-info" id="meetingInfo">
+        <label>📌 Asunto / Tema de la reunión</label>
+        <input type="text" id="meetingTopic" placeholder="Ej: Seguimiento merma Fruver">
+        <div style="margin-top:12px">
+            <label>👥 Participantes</label>
+            <input type="text" id="meetingParticipants" placeholder="Ej: Carlos, Ana, Jefe RRHH">
+        </div>
+    </div>
+
+    <div class="stats-row" id="statsRow" style="display:none"></div>
+
+    <div class="input-section">
+        <div class="sentiment-row" id="sentimentRow"></div>
+        <div class="input-row">
+            <textarea class="text-input" id="noteInput" placeholder="Escribe o dicta tu observación..." rows="2"></textarea>
+            <div class="action-btns">
+                <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Dictar por voz">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
+                <button class="add-btn" onclick="addNote()" title="Agregar nota">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="voice-status" id="voiceStatus">🔴 Escuchando... habla ahora</div>
+    </div>
+
+    <div class="notes-list" id="notesList">
+        <div class="empty-state" id="emptyState">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <p>Aún no hay notas.<br>Comienza a escribir o dictar tus observaciones.</p>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <button class="btn btn-clear" onclick="clearAll()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        Limpiar
+    </button>
+    <button class="btn btn-summary" onclick="generateSummary()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Resumen
+    </button>
+    <button class="btn btn-daily" onclick="generateDailySummary()" title="Resumen del día para tu agenda">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Día
+    </button>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📋 Resumen de Notas</h2>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="share-section">
+            <label>📱 Número de WhatsApp (opcional)</label>
+            <input type="tel" id="whatsappNumber" placeholder="Ej: +57 300 123 4567">
+            <div class="hint">Incluye código de país. Si lo dejas vacío, eliges el contacto en WhatsApp.</div>
+        </div>
+        <div class="wa-link-area">
+            <p>👇 Toca este botón para enviar por WhatsApp</p>
+            <a href="#" id="waLink" class="wa-big-link" target="_blank" rel="noopener noreferrer">
+                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                ABRIR WHATSAPP
+            </a>
+            <div class="wa-fallback">Se copiará el texto automáticamente al portapapeles</div>
+        </div>
+        <div class="share-btns">
+            <button class="share-btn share-email" onclick="shareEmail()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Correo
+            </button>
+            <button class="share-btn share-native" id="nativeShareBtn" onclick="shareNative()" style="display:none">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                Compartir
+            </button>
+            <button class="share-btn share-notion" id="notionBtn" onclick="sendToNotion()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.213.98l14.523-.84c.84-.046.933-.56.933-1.166V6.354c0-.606-.233-.933-.746-.887l-15.177.887c-.56.047-.746.327-.746.933zm14.337.746c.093.42 0 .84-.42.887l-.7.14v10.264c-.606.327-1.166.514-1.633.514-.746 0-.933-.234-1.492-.933l-4.577-7.186v6.952l1.446.327s0 .84-1.166.84l-3.22.187c-.093-.187 0-.653.327-.746l.84-.233V9.854l-1.166-.093c-.093-.42.14-1.026.793-1.073l3.454-.233 4.764 7.279V9.34l-1.213-.14c-.093-.514.28-.887.746-.933z"/></svg>
+                Notion
+            </button>
+            <button class="share-btn share-copy" onclick="copySummary()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copiar Texto
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    let notes = [];
+    let currentMode = 'recorrido';
+    let currentSentiment = 'positive';
+    let isRecording = false;
+    let recognition = null;
+    let summaryText = '';
+    let isDailySummary = false;
+
+    const modeConfig = {
+        recorrido: {
+            label: 'Recorrido en Tienda',
+            icon: '🏬',
+            notionTipo: 'Recorrido',
+            placeholder: 'Escribe o dicta tu observación...',
+            categories: [
+                { key: 'positive', label: 'Positivo', cls: 'positive' },
+                { key: 'negative', label: 'Oport. Mejora', cls: 'negative' },
+                { key: 'neutral', label: 'Neutral', cls: 'neutral' }
+            ],
+            summaryTitles: { positive: '✅ Puntos Positivos', negative: '🔧 Oportunidades de Mejora', neutral: '📝 Observaciones' }
+        },
+        reunion: {
+            label: 'Reunión',
+            icon: '👥',
+            notionTipo: 'Reunión',
+            placeholder: 'Escribe o dicta un punto de la reunión...',
+            categories: [
+                { key: 'acuerdo', label: 'Acuerdo', cls: 'positive' },
+                { key: 'pendiente', label: 'Pendiente', cls: 'negative' },
+                { key: 'informacion', label: 'Información', cls: 'neutral' }
+            ],
+            summaryTitles: { acuerdo: '🤝 Acuerdos y Compromisos', pendiente: '⏳ Pendientes de la Reunión', informacion: '📝 Información / Notas' }
+        },
+        pendientes: {
+            label: 'Pendientes',
+            icon: '✅',
+            notionTipo: 'Pendientes',
+            placeholder: 'Escribe o dicta una tarea pendiente...',
+            categories: [
+                { key: 'urgente', label: 'Urgente', cls: 'negative' },
+                { key: 'normal', label: 'Normal', cls: 'neutral' },
+                { key: 'hecho', label: 'Hecho', cls: 'positive' }
+            ],
+            summaryTitles: { urgente: '🔴 Urgentes', normal: '🟡 Normales', hecho: '✅ Completados' }
+        }
+    };
+    const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label };
+
+    if (navigator.share) { document.getElementById('nativeShareBtn').style.display = 'flex'; }
+
+    const DEFAULT_WHATSAPP = '+573188402905';
+
+    (function loadSavedPhone() {
+        try {
+            const saved = sessionStorage.getItem('opsnotes_phone');
+            document.getElementById('whatsappNumber').value = saved || DEFAULT_WHATSAPP;
+        } catch(e) {
+            document.getElementById('whatsappNumber').value = DEFAULT_WHATSAPP;
+        }
+    })();
+
+    document.getElementById('whatsappNumber').addEventListener('input', updateWhatsAppLink);
+
+    function handleStoreSelect() {
+        const select = document.getElementById('storeSelect');
+        const customInput = document.getElementById('customStoreInput');
+        if (select.value === '__custom__') {
+            customInput.classList.add('visible');
+            customInput.focus();
+        } else {
+            customInput.classList.remove('visible');
+            customInput.value = '';
+        }
+    }
+
+    function getStoreName() {
+        const select = document.getElementById('storeSelect');
+        if (select.value === '__custom__') {
+            return document.getElementById('customStoreInput').value.trim();
+        }
+        return select.value;
+    }
+
+    function updateWhatsAppLink() {
+        if (!summaryText) return;
+        const phoneInput = document.getElementById('whatsappNumber').value.trim();
+        let cleanPhone = phoneInput.replace(/[^\d+]/g, '');
+        if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.substring(1);
+        const encoded = encodeURIComponent(summaryText);
+        let url;
+        if (cleanPhone && cleanPhone.length >= 8) {
+            url = 'https://wa.me/' + cleanPhone + '?text=' + encoded;
+        } else {
+            url = 'https://wa.me/?text=' + encoded;
+        }
+        document.getElementById('waLink').href = url;
+    }
+
+    function initSpeechRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) return null;
+        const rec = new SR();
+        rec.lang = 'es-ES';
+        rec.interimResults = true;
+        rec.continuous = true;
+        rec.onresult = (event) => {
+            let final = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) final += event.results[i][0].transcript;
+            }
+            const inp = document.getElementById('noteInput');
+            if (final) inp.value = inp.value ? inp.value + ' ' + final : final;
+        };
+        rec.onerror = (e) => { if (e.error === 'not-allowed') showToast('⚠️ Permiso de micrófono denegado'); stopVoice(); };
+        rec.onend = () => { if (isRecording) { try { rec.start(); } catch(e) {} } };
+        return rec;
+    }
+
+    function toggleVoice() { isRecording ? stopVoice() : startVoice(); }
+
+    function startVoice() {
+        if (!recognition) recognition = initSpeechRecognition();
+        if (!recognition) { showToast('⚠️ Usa Chrome para dictar por voz'); return; }
+        isRecording = true;
+        document.getElementById('voiceBtn').classList.add('recording');
+        document.getElementById('voiceStatus').classList.add('visible');
+        try { recognition.start(); } catch(e) {}
+    }
+
+    function stopVoice() {
+        isRecording = false;
+        document.getElementById('voiceBtn').classList.remove('recording');
+        document.getElementById('voiceStatus').classList.remove('visible');
+        if (recognition) { try { recognition.stop(); } catch(e) {} }
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        document.getElementById('storeInfo').classList.toggle('visible', mode === 'recorrido');
+        document.getElementById('meetingInfo').classList.toggle('visible', mode === 'reunion');
+        document.getElementById('noteInput').placeholder = modeConfig[mode].placeholder;
+        currentSentiment = modeConfig[mode].categories[0].key;
+        renderSentimentButtons();
+        renderStatsRow();
+        renderNotes();
+        updateStats();
+    }
+
+    function renderSentimentButtons() {
+        const row = document.getElementById('sentimentRow');
+        const cats = modeConfig[currentMode].categories;
+        row.innerHTML = cats.map((c, i) => '<button class="sentiment-btn' + (i === 0 ? ' active-' + c.cls : '') + '" data-key="' + c.key + '" data-cls="' + c.cls + '" onclick="setSentiment(\'' + c.key + '\')">' + escapeHtml(c.label) + '</button>').join('');
+    }
+
+    function renderStatsRow() {
+        const cats = modeConfig[currentMode].categories;
+        const row = document.getElementById('statsRow');
+        row.innerHTML = cats.map(c => '<div class="stat-card"><div class="stat-number ' + c.cls + '" id="stat_' + c.key + '">0</div><div class="stat-label">' + escapeHtml(c.label) + '</div></div>').join('');
+        row.style.display = 'flex';
+    }
+
+    function getCategoryMeta(mode, key) {
+        return modeConfig[mode].categories.find(c => c.key === key);
+    }
+
+    function setSentiment(key) {
+        currentSentiment = key;
+        const cats = modeConfig[currentMode].categories;
+        document.querySelectorAll('.sentiment-btn').forEach(b => {
+            b.className = 'sentiment-btn';
+            if (b.dataset.key === key) b.classList.add('active-' + b.dataset.cls);
+        });
+
+        // Auto-agregar nota si hay texto escrito
+        const inp = document.getElementById('noteInput');
+        const text = inp.value.trim();
+        if (text) {
+            addNoteInternal(text);
+            inp.value = '';
+            inp.style.height = 'auto';
+        }
+    }
+
+    function addNote() {
+        const inp = document.getElementById('noteInput');
+        const text = inp.value.trim();
+        if (!text) { showToast('⚠️ Escribe una observación primero'); return; }
+        addNoteInternal(text);
+        inp.value = '';
+        inp.style.height = 'auto';
+    }
+
+    async function saveNotes() {
+        try {
+            const fb = await window.__fbReady;
+            if (!fb) throw new Error('Firebase no disponible');
+            await fb.setDoc(fb.doc(fb.db, 'opsnotes', 'notes'), { notes: notes, updatedAt: Date.now() });
+        } catch (e) {
+            console.error('No se pudo guardar en Firebase', e);
+            showToast('⚠️ No se pudo guardar en la nube');
+        }
+    }
+
+    function addNoteInternal(text) {
+        const meta = getCategoryMeta(currentMode, currentSentiment);
+        notes.push({
+            id: Date.now(),
+            text: text,
+            category: currentSentiment,
+            cls: meta.cls,
+            mode: currentMode,
+            time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+        });
+        renderNotes();
+        updateStats();
+        saveNotes();
+        showToast('✅ ' + meta.label + ' agregado');
+    }
+
+    function deleteNote(id) { notes = notes.filter(n => n.id !== id); renderNotes(); updateStats(); saveNotes(); }
+
+    function renderNotes() {
+        const list = document.getElementById('notesList');
+        const modeNotes = notes.filter(n => n.mode === currentMode);
+        if (modeNotes.length === 0) {
+            list.innerHTML = '';
+            const d = document.createElement('div');
+            d.className = 'empty-state';
+            d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay ' + (currentMode === 'pendientes' ? 'pendientes.<br>Comienza a escribir o dictar tus tareas.' : 'notas.<br>Comienza a escribir o dictar.') + '</p>';
+            list.appendChild(d);
+            return;
+        }
+        list.innerHTML = [...modeNotes].reverse().map(n => {
+            const label = getCategoryMeta(n.mode, n.category).label;
+            return '<div class="note-card ' + n.cls + '"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div></div>';
+        }).join('');
+    }
+
+    function updateStats() {
+        const modeNotes = notes.filter(n => n.mode === currentMode);
+        modeConfig[currentMode].categories.forEach(c => {
+            const el = document.getElementById('stat_' + c.key);
+            if (el) el.textContent = modeNotes.filter(n => n.category === c.key).length;
+        });
+        document.getElementById('noteCount').textContent = notes.length + ' registro' + (notes.length !== 1 ? 's' : '');
+    }
+
+    function generateSummary() {
+        const modeNotes = notes.filter(n => n.mode === currentMode);
+        if (modeNotes.length === 0) { showToast('⚠️ No hay registros en ' + modeLabels[currentMode]); return; }
+        isDailySummary = false;
+        const cfg = modeConfig[currentMode];
+        const storeName = currentMode === 'recorrido' ? getStoreName() : '';
+        const managerName = currentMode === 'recorrido' ? document.getElementById('managerName').value.trim() : '';
+        const meetingTopic = currentMode === 'reunion' ? document.getElementById('meetingTopic').value.trim() : '';
+        const meetingParticipants = currentMode === 'reunion' ? document.getElementById('meetingParticipants').value.trim() : '';
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+
+        let html = '<div class="summary-meta"><p><strong>📅 Fecha:</strong> ' + dateStr + '</p><p><strong>🕐 Hora:</strong> ' + timeStr + '</p><p><strong>' + cfg.icon + ' Tipo:</strong> ' + cfg.label + '</p>';
+        if (storeName) html += '<p><strong>🏪 Tienda:</strong> ' + escapeHtml(storeName) + '</p>';
+        if (managerName) html += '<p><strong>👤 Administrador:</strong> ' + escapeHtml(managerName) + '</p>';
+        if (meetingTopic) html += '<p><strong>📌 Asunto:</strong> ' + escapeHtml(meetingTopic) + '</p>';
+        if (meetingParticipants) html += '<p><strong>👥 Participantes:</strong> ' + escapeHtml(meetingParticipants) + '</p>';
+        html += '<p><strong>📝 Total:</strong> ' + modeNotes.length + '</p></div>';
+
+        cfg.categories.forEach(cat => {
+            const items = modeNotes.filter(n => n.category === cat.key);
+            if (items.length === 0) return;
+            html += '<div class="summary-section"><h3 class="' + cat.cls + '">' + cfg.summaryTitles[cat.key] + ' (' + items.length + ')</h3>';
+            items.forEach(n => { html += '<div class="summary-item">' + escapeHtml(n.text) + '</div>'; });
+            html += '</div>';
+        });
+
+        document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('visible');
+        buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg);
+        updateWhatsAppLink();
+
+        if (currentMode === 'reunion') {
+            sendToNotion();
+        }
+    }
+
+    function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg) {
+        let t = cfg.icon + ' *RESUMEN — ' + cfg.label.toUpperCase() + '*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n';
+        if (storeName) t += '🏪 Tienda: ' + storeName + '\n';
+        if (managerName) t += '👤 Administrador: ' + managerName + '\n';
+        if (meetingTopic) t += '📌 Asunto: ' + meetingTopic + '\n';
+        if (meetingParticipants) t += '👥 Participantes: ' + meetingParticipants + '\n';
+        t += '📝 Total: ' + modeNotes.length + '\n━━━━━━━━━━━━━━━━━━\n\n';
+        cfg.categories.forEach(cat => {
+            const items = modeNotes.filter(n => n.category === cat.key);
+            if (items.length === 0) return;
+            t += '*' + cfg.summaryTitles[cat.key].toUpperCase() + ' (' + items.length + ')*\n';
+            items.forEach((n, i) => { t += (i + 1) + '. ' + n.text + '\n'; });
+            t += '\n';
+        });
+        t += '━━━━━━━━━━━━━━━━━━\n_Generado con OpsNotes_';
+        summaryText = t;
+    }
+
+    function generateDailySummary() {
+        if (notes.length === 0) { showToast('⚠️ No hay registros hoy'); return; }
+        isDailySummary = true;
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+
+        let html = '<div class="summary-meta"><p><strong>📅 Agenda del día:</strong> ' + dateStr + '</p><p><strong>🕐 Generado:</strong> ' + timeStr + '</p><p><strong>📝 Total registros:</strong> ' + notes.length + '</p></div>';
+        let t = '📅 *AGENDA DEL DÍA*\n━━━━━━━━━━━━━━━━━━\n' + dateStr + '\n━━━━━━━━━━━━━━━━━━\n\n';
+
+        ['recorrido', 'reunion', 'pendientes'].forEach(modeKey => {
+            const modeNotes = notes.filter(n => n.mode === modeKey);
+            if (modeNotes.length === 0) return;
+            const cfg = modeConfig[modeKey];
+            html += '<div class="summary-section"><h3 class="neutral">' + cfg.icon + ' ' + cfg.label + ' (' + modeNotes.length + ')</h3>';
+            t += cfg.icon + ' *' + cfg.label.toUpperCase() + '*\n';
+            cfg.categories.forEach(cat => {
+                const items = modeNotes.filter(n => n.category === cat.key);
+                if (items.length === 0) return;
+                html += '<p style="font-size:0.72rem;font-weight:700;margin:8px 0 4px;color:var(--text-light);text-transform:uppercase">' + escapeHtml(cat.label) + '</p>';
+                items.forEach(n => {
+                    html += '<div class="summary-item">' + escapeHtml(n.text) + '</div>';
+                    t += '• [' + cat.label + '] ' + n.text + '\n';
+                });
+            });
+            html += '</div>';
+            t += '\n';
+        });
+        t += '━━━━━━━━━━━━━━━━━━\n_Generado con OpsNotes_';
+
+        document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('visible');
+        summaryText = t;
+        updateWhatsAppLink();
+    }
+
+    function shareEmail() {
+        const storeName = getStoreName();
+        const subject = encodeURIComponent('Resumen de Notas — ' + modeLabels[currentMode] + (storeName ? ' — ' + storeName : ''));
+        const body = encodeURIComponent(summaryText);
+        window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+    }
+
+    function shareNative() {
+        if (!navigator.share) return;
+        navigator.share({ title: 'Resumen OpsNotes', text: summaryText }).catch(() => {});
+    }
+
+    const NOTION_DATA_SOURCE_ID = 'c93d3c3e-f13a-4bb3-9915-cb0870cc785d'; // OpsNotes — Registros
+
+    async function sendToNotion() {
+        if (!summaryText) { showToast('⚠️ Genera el resumen primero'); return; }
+        const btn = document.getElementById('notionBtn');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Enviando…';
+
+        const now = new Date();
+        const dateISO = now.toISOString().split('T')[0];
+        const dateLabel = now.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        let tipo, pageTitle, storeName = '';
+        if (isDailySummary) {
+            tipo = 'Agenda Diaria';
+            pageTitle = 'Agenda del día — ' + dateLabel;
+        } else {
+            const cfg = modeConfig[currentMode];
+            tipo = cfg.notionTipo;
+            const titleParts = [cfg.label];
+            if (currentMode === 'recorrido') {
+                storeName = getStoreName();
+                if (storeName) titleParts.push(storeName);
+            } else if (currentMode === 'reunion') {
+                const topic = document.getElementById('meetingTopic').value.trim();
+                if (topic) titleParts.push(topic);
+            }
+            titleParts.push(dateLabel);
+            pageTitle = titleParts.join(' — ');
+        }
+        pageTitle = pageTitle.replace(/"/g, "'");
+
+        let propsStr = '{"Nombre": "' + pageTitle + '", "date:Date:start": "' + dateISO + '", "date:Date:is_datetime": 0, "Tipo": "' + tipo + '"';
+        if (storeName) propsStr += ', "Tienda": "' + storeName.replace(/"/g, "'") + '"';
+        propsStr += '}';
+
+        const prompt = 'Crea una nueva página en Notion usando la herramienta notion-create-pages. ' +
+            'Parent: {"data_source_id": "' + NOTION_DATA_SOURCE_ID + '"}. ' +
+            'Properties: ' + propsStr + '. ' +
+            'Content (markdown, úsalo tal cual sin modificarlo):\n\n' + summaryText + '\n\n' +
+            'Responde solo con el URL de la página creada, nada más.';
+
+        try {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-6',
+                    max_tokens: 1000,
+                    messages: [{ role: 'user', content: prompt }],
+                    mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion-mcp' }]
+                })
+            });
+            const data = await response.json();
+            const toolResults = (data.content || []).filter(b => b.type === 'mcp_tool_result');
+            const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ');
+            if (toolResults.length > 0 || /notion\.so|app\.notion\.com/i.test(textBlocks)) {
+                showToast('✅ Enviado a Notion — OpsNotes Registros');
+            } else if (textBlocks) {
+                showToast('⚠️ Revisa Notion, respuesta: ' + textBlocks.slice(0, 60));
+            } else {
+                showToast('⚠️ No se pudo confirmar el envío');
+            }
+        } catch (err) {
+            showToast('⚠️ Error al conectar con Notion');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    }
+
+    function copySummary() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(summaryText).then(() => showToast('📋 ¡Copiado!')).catch(() => fallbackCopy());
+        } else { fallbackCopy(); }
+    }
+
+    function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = summaryText;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('📋 ¡Copiado!'); } catch(e) { showToast('⚠️ No se pudo copiar'); }
+        document.body.removeChild(ta);
+    }
+
+    document.getElementById('waLink').addEventListener('click', function() {
+        const phoneInput = document.getElementById('whatsappNumber').value.trim();
+        if (phoneInput) { try { sessionStorage.setItem('opsnotes_phone', phoneInput); } catch(e) {} }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(summaryText).catch(() => {});
+        }
+        showToast('📱 Abriendo WhatsApp... (texto copiado)');
+    });
+
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('visible'); }
+
+    function clearAll() {
+        if (notes.length === 0) return;
+        if (confirm('¿Borrar todas las notas guardadas? Esta acción no se puede deshacer.')) { notes = []; renderNotes(); updateStats(); saveNotes(); showToast('🗑️ Eliminadas'); }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('visible');
+        clearTimeout(t._to);
+        t._to = setTimeout(() => t.classList.remove('visible'), 2500);
+    }
+
+    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+    document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+    document.getElementById('noteInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } });
+    document.getElementById('noteInput').addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
+
+    async function loadNotes() {
+        try {
+            const fb = await window.__fbReady;
+            if (!fb) throw new Error('Firebase no disponible');
+            const snap = await fb.getDoc(fb.doc(fb.db, 'opsnotes', 'notes'));
+            if (snap.exists()) {
+                notes = snap.data().notes || [];
+            }
+        } catch (e) {
+            console.error('No se pudieron cargar las notas', e);
+        }
+    }
+
+    (async function init() {
+        await loadNotes();
+        setMode('recorrido');
+        if (notes.length > 0) {
+            showToast('☁️ ' + notes.length + ' registro' + (notes.length !== 1 ? 's' : '') + ' sincronizado' + (notes.length !== 1 ? 's' : ''));
+        }
+    })();
+</script>
+
+</body>
+</html>
