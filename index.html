@@ -742,20 +742,15 @@
             pageTitle = titleParts.join(' — ');
         }
 
-        const payload = {
-            title: pageTitle,
-            dateISO: dateISO,
-            tipo: tipo,
-            tienda: storeName,
-            content: summaryText
-        };
-
         try {
-            // Sin header Content-Type explícito para evitar el preflight CORS que Apps Script no maneja bien
-            const response = await fetch(GAS_NOTION_BRIDGE_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
+            const params = new URLSearchParams({
+                title: pageTitle,
+                dateISO: dateISO,
+                tipo: tipo,
+                tienda: storeName,
+                content: summaryText
             });
+            const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
             const data = await response.json();
             if (data.ok) {
                 showToast('✅ Enviado a Notion — OpsNotes Registros');
