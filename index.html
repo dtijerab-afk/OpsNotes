@@ -710,7 +710,7 @@
         navigator.share({ title: 'Resumen OpsNotes', text: summaryText }).catch(() => {});
     }
 
-    const NOTION_DATA_SOURCE_ID = 'c93d3c3e-f13a-4bb3-9915-cb0870cc785d'; // OpsNotes — Registros
+    const GAS_NOTION_BRIDGE_URL = 'https://script.google.com/macros/s/AKfycbwsuB8TtM1bzCrReG9WZ1BLW39a4RS8FFD52sq2JH6hzQUhkgkFmkmp9xR5nWXTapkpsA/exec';
 
     async function sendToNotion() {
         if (!summaryText) { showToast('⚠️ Genera el resumen primero'); return; }
@@ -741,41 +741,31 @@
             titleParts.push(dateLabel);
             pageTitle = titleParts.join(' — ');
         }
-        pageTitle = pageTitle.replace(/"/g, "'");
 
-        let propsStr = '{"Nombre": "' + pageTitle + '", "date:Date:start": "' + dateISO + '", "date:Date:is_datetime": 0, "Tipo": "' + tipo + '"';
-        if (storeName) propsStr += ', "Tienda": "' + storeName.replace(/"/g, "'") + '"';
-        propsStr += '}';
-
-        const prompt = 'Crea una nueva página en Notion usando la herramienta notion-create-pages. ' +
-            'Parent: {"data_source_id": "' + NOTION_DATA_SOURCE_ID + '"}. ' +
-            'Properties: ' + propsStr + '. ' +
-            'Content (markdown, úsalo tal cual sin modificarlo):\n\n' + summaryText + '\n\n' +
-            'Responde solo con el URL de la página creada, nada más.';
+        const payload = {
+            title: pageTitle,
+            dateISO: dateISO,
+            tipo: tipo,
+            tienda: storeName,
+            content: summaryText
+        };
 
         try {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            // Sin header Content-Type explícito para evitar el preflight CORS que Apps Script no maneja bien
+            const response = await fetch(GAS_NOTION_BRIDGE_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-6',
-                    max_tokens: 1000,
-                    messages: [{ role: 'user', content: prompt }],
-                    mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion-mcp' }]
-                })
+                body: JSON.stringify(payload)
             });
             const data = await response.json();
-            const toolResults = (data.content || []).filter(b => b.type === 'mcp_tool_result');
-            const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ');
-            if (toolResults.length > 0 || /notion\.so|app\.notion\.com/i.test(textBlocks)) {
+            if (data.ok) {
                 showToast('✅ Enviado a Notion — OpsNotes Registros');
-            } else if (textBlocks) {
-                showToast('⚠️ Revisa Notion, respuesta: ' + textBlocks.slice(0, 60));
             } else {
-                showToast('⚠️ No se pudo confirmar el envío');
+                showToast('⚠️ Notion: ' + (data.error || 'error desconocido'));
+                console.error('Notion bridge error', data);
             }
         } catch (err) {
-            showToast('⚠️ Error al conectar con Notion');
+            showToast('⚠️ Error al conectar con el puente de Notion');
+            console.error(err);
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHTML;
