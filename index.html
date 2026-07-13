@@ -269,7 +269,7 @@
             <label>👤 Elige el administrador</label>
             <div class="sentiment-row" id="adminChoiceRow"></div>
         </div>
-        <div style="margin-top:12px">
+        <div id="managerNameWrap" style="margin-top:12px">
             <label>👤 Administrador</label>
             <input type="text" id="managerName" placeholder="Ej: Carlos Rodríguez">
         </div>
@@ -493,6 +493,7 @@
             choiceWrap.style.display = 'none';
             choiceRow.innerHTML = '';
             selectedAdminPhone = '';
+            document.getElementById('managerNameWrap').style.display = 'block';
             return;
         }
 
@@ -507,9 +508,11 @@
                 '<button class="sentiment-btn" data-name="' + admins.principal + '" data-phone="' + admins.principalPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.principal + ' (Principal)</button>' +
                 '<button class="sentiment-btn" data-name="' + admins.comercial + '" data-phone="' + admins.comercialPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.comercial + ' (Comercial)</button>';
             choiceWrap.style.display = 'block';
+            document.getElementById('managerNameWrap').style.display = 'none';
         } else {
             choiceWrap.style.display = 'none';
             choiceRow.innerHTML = '';
+            document.getElementById('managerNameWrap').style.display = 'block';
         }
     }
 
