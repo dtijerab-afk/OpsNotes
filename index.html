@@ -265,6 +265,10 @@
             </select>
         </div>
         <input type="text" class="custom-store-input" id="customStoreInput" placeholder="Escribe el nombre de la tienda...">
+        <div id="adminChoiceWrap" style="display:none; margin-top:12px">
+            <label>👤 Elige el administrador</label>
+            <div class="sentiment-row" id="adminChoiceRow"></div>
+        </div>
         <div style="margin-top:12px">
             <label>👤 Administrador</label>
             <input type="text" id="managerName" placeholder="Ej: Carlos Rodríguez">
@@ -465,31 +469,55 @@
     document.getElementById('whatsappNumber').addEventListener('input', updateWhatsAppLink);
 
     const storeAdmins = {
-        'Único': { principal: 'Zeudy Otero', comercial: 'Manuel Cortina' },
-        'Calle 30': { principal: 'Rosny Maury', comercial: 'Ronald Montaño' },
-        'Soledad': { principal: 'Dorlies Marchenas', comercial: 'Alexander Briceño' },
-        'Alkarawi': { principal: 'Leonor Rodríguez', comercial: 'Genny Hoyos' },
-        'Bostón': { principal: 'Juliana Charrys', comercial: 'Julio César Martínez' },
-        'Santo Tomás': { principal: 'Sandra Salgado', comercial: 'Robin Mercado' },
-        'Nuestro': { principal: 'Mauricio Escorcia', comercial: 'Miller Orozco' },
-        'Villacampestre': { principal: 'Rosa Payares', comercial: 'José Medellín' }
+        'Único': { principal: 'Zeudy Otero', principalPhone: '3013503220', comercial: 'Manuel Cortina', comercialPhone: '3014110857' },
+        'Calle 30': { principal: 'Rosny Maury', principalPhone: '3005472183', comercial: 'Ronald Montaño', comercialPhone: '3011208880' },
+        'Soledad': { principal: 'Dorlies Marchenas', principalPhone: '3016714287', comercial: 'Alexander Briceño', comercialPhone: '3044988768' },
+        'Alkarawi': { principal: 'Leonor Rodríguez', principalPhone: '3014339137', comercial: 'Genny Hoyos', comercialPhone: '3102889515' },
+        'Bostón': { principal: 'Juliana Charrys', principalPhone: '3046735115', comercial: 'Julio César Martínez', comercialPhone: '3103390484' },
+        'Santo Tomás': { principal: 'Sandra Salgado', principalPhone: '3017253767', comercial: 'Robin Mercado', comercialPhone: '3023536010' },
+        'Nuestro': { principal: 'Mauricio Escorcia', principalPhone: '3015555814', comercial: 'Miller Orozco', comercialPhone: '3144467131' },
+        'Villacampestre': { principal: 'Rosa Payares', principalPhone: '3108423212', comercial: 'José Medellín', comercialPhone: '3102377861' }
     };
+    let selectedAdminPhone = '';
 
     function handleStoreSelect() {
         const select = document.getElementById('storeSelect');
         const customInput = document.getElementById('customStoreInput');
+        const choiceWrap = document.getElementById('adminChoiceWrap');
+        const choiceRow = document.getElementById('adminChoiceRow');
+
         if (select.value === '__custom__') {
             customInput.classList.add('visible');
             customInput.focus();
             document.getElementById('managerName').value = '';
-        } else {
-            customInput.classList.remove('visible');
-            customInput.value = '';
-            const admins = storeAdmins[select.value];
-            document.getElementById('managerName').value = admins
-                ? admins.principal + ' (Principal) · ' + admins.comercial + ' (Comercial)'
-                : '';
+            choiceWrap.style.display = 'none';
+            choiceRow.innerHTML = '';
+            selectedAdminPhone = '';
+            return;
         }
+
+        customInput.classList.remove('visible');
+        customInput.value = '';
+        document.getElementById('managerName').value = '';
+
+        const admins = storeAdmins[select.value];
+        selectedAdminPhone = '';
+        if (admins) {
+            choiceRow.innerHTML =
+                '<button class="sentiment-btn" data-name="' + admins.principal + '" data-phone="' + admins.principalPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.principal + ' (Principal)</button>' +
+                '<button class="sentiment-btn" data-name="' + admins.comercial + '" data-phone="' + admins.comercialPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.comercial + ' (Comercial)</button>';
+            choiceWrap.style.display = 'block';
+        } else {
+            choiceWrap.style.display = 'none';
+            choiceRow.innerHTML = '';
+        }
+    }
+
+    function chooseAdmin(btn) {
+        document.querySelectorAll('#adminChoiceRow .sentiment-btn').forEach(b => b.className = 'sentiment-btn');
+        btn.classList.add('active-positive');
+        document.getElementById('managerName').value = btn.dataset.name;
+        selectedAdminPhone = btn.dataset.phone || '';
     }
 
     function getStoreName() {
@@ -818,6 +846,10 @@
         document.getElementById('modalBody').innerHTML = html;
         document.getElementById('modalOverlay').classList.add('visible');
         buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg);
+
+        if (currentMode === 'recorrido' && selectedAdminPhone) {
+            document.getElementById('whatsappNumber').value = '+57' + selectedAdminPhone;
+        }
         updateWhatsAppLink();
 
         if (currentMode === 'reunion' || currentMode === 'recorrido') {
