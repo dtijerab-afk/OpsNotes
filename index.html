@@ -277,7 +277,13 @@
 
     <div class="input-section">
         <div class="sentiment-row" id="sentimentRow"></div>
-        <div class="input-row">
+
+        <div class="store-info" id="compromisoDateWrap" style="display:none; margin-bottom:12px; padding:12px;">
+            <label>📅 Fecha del compromiso</label>
+            <input type="date" id="compromisoDate">
+        </div>
+
+        <div class="input-row" id="normalInputRow">
             <textarea class="text-input" id="noteInput" placeholder="Escribe o dicta tu observación..." rows="2"></textarea>
             <div class="action-btns">
                 <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Dictar por voz">
@@ -289,6 +295,31 @@
             </div>
         </div>
         <div class="voice-status" id="voiceStatus">🔴 Escuchando... habla ahora</div>
+
+        <div id="taskForm" style="display:none">
+            <div class="sentiment-row" id="taskTypeRow" style="margin-bottom:12px">
+                <button class="sentiment-btn active-neutral" data-type="laboral" onclick="setTaskType('laboral')">💼 Laboral</button>
+                <button class="sentiment-btn" data-type="personal" onclick="setTaskType('personal')">🏠 Personal</button>
+            </div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📋 Nombre de la tarea</label>
+            <textarea class="text-input" id="taskName" placeholder="Ej: Revisar inventario de Fruver..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite</label>
+                    <input type="date" id="taskDueDate" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">👤 Responsable</label>
+                    <input type="text" id="taskResponsible" placeholder="Ej: Carlos" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
+                </div>
+            </div>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📝 Descripción</label>
+            <textarea class="text-input" id="taskDescription" placeholder="Detalles de la tarea (opcional)..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
+            <button class="add-btn" onclick="addTask()" style="width:100%;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Agregar Tarea
+            </button>
+        </div>
     </div>
 
     <div class="notes-list" id="notesList">
@@ -365,6 +396,7 @@
     let recognition = null;
     let summaryText = '';
     let isDailySummary = false;
+    let currentTaskType = 'laboral';
 
     const modeConfig = {
         recorrido: {
@@ -374,10 +406,9 @@
             placeholder: 'Escribe o dicta tu observación...',
             categories: [
                 { key: 'positive', label: 'Positivo', cls: 'positive' },
-                { key: 'negative', label: 'Oport. Mejora', cls: 'negative' },
-                { key: 'neutral', label: 'Neutral', cls: 'neutral' }
+                { key: 'negative', label: 'Oport. Mejora', cls: 'negative' }
             ],
-            summaryTitles: { positive: '✅ Puntos Positivos', negative: '🔧 Oportunidades de Mejora', neutral: '📝 Observaciones' }
+            summaryTitles: { positive: '✅ Puntos Positivos', negative: '🔧 Oportunidades de Mejora' }
         },
         reunion: {
             label: 'Reunión',
@@ -385,23 +416,16 @@
             notionTipo: 'Reunión',
             placeholder: 'Escribe o dicta un punto de la reunión...',
             categories: [
-                { key: 'acuerdo', label: 'Acuerdo', cls: 'positive' },
-                { key: 'pendiente', label: 'Pendiente', cls: 'negative' },
-                { key: 'informacion', label: 'Información', cls: 'neutral' }
+                { key: 'temas', label: 'Temas Abordados', cls: 'neutral' },
+                { key: 'compromisos', label: 'Compromisos', cls: 'positive', hasDate: true }
             ],
-            summaryTitles: { acuerdo: '🤝 Acuerdos y Compromisos', pendiente: '⏳ Pendientes de la Reunión', informacion: '📝 Información / Notas' }
+            summaryTitles: { temas: '📋 Temas Abordados', compromisos: '🤝 Compromisos' }
         },
         pendientes: {
             label: 'Pendientes',
             icon: '✅',
             notionTipo: 'Pendientes',
-            placeholder: 'Escribe o dicta una tarea pendiente...',
-            categories: [
-                { key: 'urgente', label: 'Urgente', cls: 'negative' },
-                { key: 'normal', label: 'Normal', cls: 'neutral' },
-                { key: 'hecho', label: 'Hecho', cls: 'positive' }
-            ],
-            summaryTitles: { urgente: '🔴 Urgentes', normal: '🟡 Normales', hecho: '✅ Completados' }
+            isTaskMode: true
         }
     };
     const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label };
@@ -499,10 +523,23 @@
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         document.getElementById('storeInfo').classList.toggle('visible', mode === 'recorrido');
         document.getElementById('meetingInfo').classList.toggle('visible', mode === 'reunion');
-        document.getElementById('noteInput').placeholder = modeConfig[mode].placeholder;
-        currentSentiment = modeConfig[mode].categories[0].key;
-        renderSentimentButtons();
-        renderStatsRow();
+        document.getElementById('compromisoDateWrap').style.display = 'none';
+
+        const cfg = modeConfig[mode];
+        const isTask = !!cfg.isTaskMode;
+        document.getElementById('taskForm').style.display = isTask ? 'block' : 'none';
+        document.getElementById('normalInputRow').style.display = isTask ? 'none' : 'flex';
+        document.getElementById('sentimentRow').style.display = isTask ? 'none' : 'flex';
+        document.getElementById('statsRow').style.display = isTask ? 'none' : 'flex';
+
+        if (!isTask) {
+            document.getElementById('noteInput').placeholder = cfg.placeholder;
+            currentSentiment = cfg.categories[0].key;
+            renderSentimentButtons();
+            renderStatsRow();
+        } else {
+            setTaskType('laboral');
+        }
         renderNotes();
         updateStats();
     }
@@ -531,6 +568,9 @@
             b.className = 'sentiment-btn';
             if (b.dataset.key === key) b.classList.add('active-' + b.dataset.cls);
         });
+
+        const meta = getCategoryMeta(currentMode, key);
+        document.getElementById('compromisoDateWrap').style.display = (meta && meta.hasDate) ? 'block' : 'none';
 
         // Auto-agregar nota si hay texto escrito
         const inp = document.getElementById('noteInput');
@@ -564,18 +604,61 @@
 
     function addNoteInternal(text) {
         const meta = getCategoryMeta(currentMode, currentSentiment);
-        notes.push({
+        const note = {
             id: Date.now(),
             text: text,
             category: currentSentiment,
             cls: meta.cls,
             mode: currentMode,
             time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
-        });
+        };
+        if (meta.hasDate) {
+            const dateVal = document.getElementById('compromisoDate').value;
+            if (dateVal) note.dueDate = dateVal;
+        }
+        notes.push(note);
         renderNotes();
         updateStats();
         saveNotes();
         showToast('✅ ' + meta.label + ' agregado');
+    }
+
+    function setTaskType(type) {
+        currentTaskType = type;
+        document.querySelectorAll('#taskTypeRow .sentiment-btn').forEach(b => {
+            b.className = 'sentiment-btn';
+            if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
+        });
+    }
+
+    function addTask() {
+        const taskName = document.getElementById('taskName').value.trim();
+        if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
+        const dueDate = document.getElementById('taskDueDate').value;
+        const responsible = document.getElementById('taskResponsible').value.trim();
+        const description = document.getElementById('taskDescription').value.trim();
+
+        notes.push({
+            id: Date.now(),
+            text: taskName,
+            dueDate: dueDate || '',
+            responsible: responsible,
+            description: description,
+            taskType: currentTaskType,
+            mode: 'pendientes',
+            cls: 'neutral',
+            time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+        });
+
+        document.getElementById('taskName').value = '';
+        document.getElementById('taskDueDate').value = '';
+        document.getElementById('taskResponsible').value = '';
+        document.getElementById('taskDescription').value = '';
+
+        renderNotes();
+        updateStats();
+        saveNotes();
+        showToast('✅ Tarea agregada');
     }
 
     function deleteNote(id) { notes = notes.filter(n => n.id !== id); renderNotes(); updateStats(); saveNotes(); }
@@ -587,18 +670,54 @@
             list.innerHTML = '';
             const d = document.createElement('div');
             d.className = 'empty-state';
-            d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay ' + (currentMode === 'pendientes' ? 'pendientes.<br>Comienza a escribir o dictar tus tareas.' : 'notas.<br>Comienza a escribir o dictar.') + '</p>';
+            d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay ' + (currentMode === 'pendientes' ? 'tareas.<br>Completa el formulario de arriba.' : 'notas.<br>Comienza a escribir o dictar.') + '</p>';
             list.appendChild(d);
             return;
         }
+
+        if (currentMode === 'pendientes') {
+            const laboral = modeNotes.filter(n => (n.taskType || 'laboral') === 'laboral');
+            const personal = modeNotes.filter(n => n.taskType === 'personal');
+            let html = '';
+            if (laboral.length) {
+                html += '<div style="font-size:0.75rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">💼 Laboral (' + laboral.length + ')</div>';
+                html += [...laboral].reverse().map(renderTaskCard).join('');
+            }
+            if (personal.length) {
+                html += '<div style="font-size:0.75rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin:' + (laboral.length ? '18px' : '4px') + ' 0 8px">🏠 Personal (' + personal.length + ')</div>';
+                html += [...personal].reverse().map(renderTaskCard).join('');
+            }
+            list.innerHTML = html;
+            return;
+        }
+
         list.innerHTML = [...modeNotes].reverse().map(n => {
             const label = getCategoryMeta(n.mode, n.category).label;
-            return '<div class="note-card ' + n.cls + '"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div></div>';
+            const dateLine = n.dueDate ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>' : '';
+            return '<div class="note-card ' + n.cls + '"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div>' + dateLine + '</div>';
         }).join('');
+    }
+
+    function renderTaskCard(n) {
+        let extra = '';
+        if (n.dueDate) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>';
+        if (n.responsible) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:2px">👤 ' + escapeHtml(n.responsible) + '</div>';
+        if (n.description) extra += '<div style="font-size:0.82rem;color:var(--text);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">' + escapeHtml(n.description) + '</div>';
+        return '<div class="note-card neutral"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge neutral">Tarea</span><span class="note-time">' + n.time + '</span></div><div class="note-text" style="font-weight:600">' + escapeHtml(n.text) + '</div>' + extra + '</div>';
+    }
+
+    function formatDateEs(iso) {
+        if (!iso) return '';
+        const [y, m, d] = iso.split('-');
+        return d + '/' + m + '/' + y;
     }
 
     function updateStats() {
         const modeNotes = notes.filter(n => n.mode === currentMode);
+        if (modeConfig[currentMode].isTaskMode) {
+            document.getElementById('noteCount').textContent = notes.length + ' registro' + (notes.length !== 1 ? 's' : '');
+            return;
+        }
         modeConfig[currentMode].categories.forEach(c => {
             const el = document.getElementById('stat_' + c.key);
             if (el) el.textContent = modeNotes.filter(n => n.category === c.key).length;
@@ -610,6 +729,12 @@
         const modeNotes = notes.filter(n => n.mode === currentMode);
         if (modeNotes.length === 0) { showToast('⚠️ No hay registros en ' + modeLabels[currentMode]); return; }
         isDailySummary = false;
+
+        if (currentMode === 'pendientes') {
+            generateTaskSummary(modeNotes);
+            return;
+        }
+
         const cfg = modeConfig[currentMode];
         const storeName = currentMode === 'recorrido' ? getStoreName() : '';
         const managerName = currentMode === 'recorrido' ? document.getElementById('managerName').value.trim() : '';
@@ -630,7 +755,10 @@
             const items = modeNotes.filter(n => n.category === cat.key);
             if (items.length === 0) return;
             html += '<div class="summary-section"><h3 class="' + cat.cls + '">' + cfg.summaryTitles[cat.key] + ' (' + items.length + ')</h3>';
-            items.forEach(n => { html += '<div class="summary-item">' + escapeHtml(n.text) + '</div>'; });
+            items.forEach(n => {
+                const dateTag = n.dueDate ? ' <span style="color:var(--text-light);font-size:0.8em">(📅 ' + formatDateEs(n.dueDate) + ')</span>' : '';
+                html += '<div class="summary-item">' + escapeHtml(n.text) + dateTag + '</div>';
+            });
             html += '</div>';
         });
 
@@ -644,6 +772,44 @@
         }
     }
 
+    function generateTaskSummary(taskNotes) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+        const laboral = taskNotes.filter(n => (n.taskType || 'laboral') === 'laboral');
+        const personal = taskNotes.filter(n => n.taskType === 'personal');
+
+        let html = '<div class="summary-meta"><p><strong>📅 Fecha:</strong> ' + dateStr + '</p><p><strong>🕐 Hora:</strong> ' + timeStr + '</p><p><strong>✅ Tipo:</strong> Pendientes</p><p><strong>📝 Total:</strong> ' + taskNotes.length + '</p></div>';
+
+        let t = '✅ *RESUMEN — PENDIENTES*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n📝 Total: ' + taskNotes.length + '\n━━━━━━━━━━━━━━━━━━\n\n';
+
+        [{ label: '💼 Laboral', items: laboral }, { label: '🏠 Personal', items: personal }].forEach(group => {
+            if (group.items.length === 0) return;
+            html += '<div class="summary-section"><h3 class="neutral">' + group.label + ' (' + group.items.length + ')</h3>';
+            t += '*' + group.label.toUpperCase() + ' (' + group.items.length + ')*\n';
+            group.items.forEach((n, i) => {
+                html += '<div class="summary-item"><strong>' + escapeHtml(n.text) + '</strong>';
+                if (n.dueDate) html += '<br>📅 ' + formatDateEs(n.dueDate);
+                if (n.responsible) html += '<br>👤 ' + escapeHtml(n.responsible);
+                if (n.description) html += '<br>📝 ' + escapeHtml(n.description);
+                html += '</div>';
+
+                t += (i + 1) + '. ' + n.text + '\n';
+                if (n.dueDate) t += '   📅 ' + formatDateEs(n.dueDate) + '\n';
+                if (n.responsible) t += '   👤 ' + n.responsible + '\n';
+                if (n.description) t += '   📝 ' + n.description + '\n';
+            });
+            html += '</div>';
+            t += '\n';
+        });
+
+        document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('visible');
+        t += '\n━━━━━━━━━━━━━━━━━━\n_Generado con OpsNotes_';
+        summaryText = t;
+        updateWhatsAppLink();
+    }
+
     function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg) {
         let t = cfg.icon + ' *RESUMEN — ' + cfg.label.toUpperCase() + '*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n';
         if (storeName) t += '🏪 Tienda: ' + storeName + '\n';
@@ -655,7 +821,9 @@
             const items = modeNotes.filter(n => n.category === cat.key);
             if (items.length === 0) return;
             t += '*' + cfg.summaryTitles[cat.key].toUpperCase() + ' (' + items.length + ')*\n';
-            items.forEach((n, i) => { t += (i + 1) + '. ' + n.text + '\n'; });
+            items.forEach((n, i) => {
+                t += (i + 1) + '. ' + n.text + (n.dueDate ? ' (📅 ' + formatDateEs(n.dueDate) + ')' : '') + '\n';
+            });
             t += '\n';
         });
         t += '━━━━━━━━━━━━━━━━━━\n_Generado con OpsNotes_';
@@ -678,15 +846,25 @@
             const cfg = modeConfig[modeKey];
             html += '<div class="summary-section"><h3 class="neutral">' + cfg.icon + ' ' + cfg.label + ' (' + modeNotes.length + ')</h3>';
             t += cfg.icon + ' *' + cfg.label.toUpperCase() + '*\n';
-            cfg.categories.forEach(cat => {
-                const items = modeNotes.filter(n => n.category === cat.key);
-                if (items.length === 0) return;
-                html += '<p style="font-size:0.72rem;font-weight:700;margin:8px 0 4px;color:var(--text-light);text-transform:uppercase">' + escapeHtml(cat.label) + '</p>';
-                items.forEach(n => {
-                    html += '<div class="summary-item">' + escapeHtml(n.text) + '</div>';
-                    t += '• [' + cat.label + '] ' + n.text + '\n';
+
+            if (cfg.isTaskMode) {
+                modeNotes.forEach(n => {
+                    const dateTag = n.dueDate ? ' (📅 ' + formatDateEs(n.dueDate) + ')' : '';
+                    html += '<div class="summary-item"><strong>' + escapeHtml(n.text) + '</strong>' + dateTag + '</div>';
+                    t += '• ' + n.text + dateTag + '\n';
                 });
-            });
+            } else {
+                cfg.categories.forEach(cat => {
+                    const items = modeNotes.filter(n => n.category === cat.key);
+                    if (items.length === 0) return;
+                    html += '<p style="font-size:0.72rem;font-weight:700;margin:8px 0 4px;color:var(--text-light);text-transform:uppercase">' + escapeHtml(cat.label) + '</p>';
+                    items.forEach(n => {
+                        const dateTag = n.dueDate ? ' (📅 ' + formatDateEs(n.dueDate) + ')' : '';
+                        html += '<div class="summary-item">' + escapeHtml(n.text) + dateTag + '</div>';
+                        t += '• [' + cat.label + '] ' + n.text + dateTag + '\n';
+                    });
+                });
+            }
             html += '</div>';
             t += '\n';
         });
@@ -719,18 +897,39 @@
         btn.disabled = true;
         btn.innerHTML = 'Enviando…';
 
-        // Pendientes va a una base distinta: una fila por tarea, no un resumen en bloque
+        // Pendientes: Laboral → fila por tarea en Cosas por hacer; Personal → fila por tarea en Pendientes Personales
         if (!isDailySummary && currentMode === 'pendientes') {
-            const tasks = notes.filter(n => n.mode === 'pendientes').map(n => ({ text: n.text, category: n.category }));
+            const allTasks = notes.filter(n => n.mode === 'pendientes');
+            const laboral = allTasks.filter(n => (n.taskType || 'laboral') === 'laboral').map(n => ({
+                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || ''
+            }));
+            const personal = allTasks.filter(n => n.taskType === 'personal').map(n => ({
+                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || ''
+            }));
+
+            if (laboral.length === 0 && personal.length === 0) {
+                showToast('⚠️ No hay tareas para enviar');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                return;
+            }
+
+            const dateISO = new Date().toISOString().split('T')[0];
+            const params = new URLSearchParams({ dateISO: dateISO });
+            if (laboral.length) params.set('tasks', JSON.stringify(laboral));
+            if (personal.length) params.set('personalTasks', JSON.stringify(personal));
+
             try {
-                const params = new URLSearchParams({ tasks: JSON.stringify(tasks) });
                 const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
                 const data = await response.json();
+                const parts = [];
+                if (data.laboral) parts.push(data.laboral.count + ' laboral' + (data.laboral.count !== 1 ? 'es' : '') + ' → Cosas por hacer');
+                if (data.personal) parts.push(data.personal.count + ' personal' + (data.personal.count !== 1 ? 'es' : '') + ' → Pendientes Personales');
                 if (data.ok) {
-                    showToast('✅ ' + data.count + ' tarea' + (data.count !== 1 ? 's' : '') + ' enviada' + (data.count !== 1 ? 's' : '') + ' a Cosas por hacer');
+                    showToast('✅ ' + (parts.join(' · ') || 'Enviado'));
                 } else {
-                    showToast('⚠️ Algunas tareas no se pudieron enviar');
-                    console.error('Notion tasks error', data);
+                    showToast('⚠️ Algo falló al enviar, revisa Notion');
+                    console.error('Notion pending split error', data);
                 }
             } catch (err) {
                 showToast('⚠️ Error al conectar con el puente de Notion');
