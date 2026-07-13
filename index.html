@@ -447,15 +447,31 @@
 
     document.getElementById('whatsappNumber').addEventListener('input', updateWhatsAppLink);
 
+    const storeAdmins = {
+        'Único': { principal: 'Zeudy Otero', comercial: 'Manuel Cortina' },
+        'Calle 30': { principal: 'Rosny Maury', comercial: 'Ronald Montaño' },
+        'Soledad': { principal: 'Dorlies Marchenas', comercial: 'Alexander Briceño' },
+        'Alkarawi': { principal: 'Leonor Rodríguez', comercial: 'Genny Hoyos' },
+        'Bostón': { principal: 'Juliana Charrys', comercial: 'Julio César Martínez' },
+        'Santo Tomás': { principal: 'Sandra Salgado', comercial: 'Robin Mercado' },
+        'Nuestro': { principal: 'Mauricio Escorcia', comercial: 'Miller Orozco' },
+        'Villacampestre': { principal: 'Rosa Payares', comercial: 'José Medellín' }
+    };
+
     function handleStoreSelect() {
         const select = document.getElementById('storeSelect');
         const customInput = document.getElementById('customStoreInput');
         if (select.value === '__custom__') {
             customInput.classList.add('visible');
             customInput.focus();
+            document.getElementById('managerName').value = '';
         } else {
             customInput.classList.remove('visible');
             customInput.value = '';
+            const admins = storeAdmins[select.value];
+            document.getElementById('managerName').value = admins
+                ? admins.principal + ' (Principal) · ' + admins.comercial + ' (Comercial)'
+                : '';
         }
     }
 
