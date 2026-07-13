@@ -223,6 +223,10 @@
         </div>
         <div class="note-count" id="noteCount">0 notas</div>
     </div>
+    <a id="notionLinkBtn" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 12px;background:rgba(255,255,255,0.15);border-radius:8px;color:white;text-decoration:none;font-size:0.75rem;font-weight:600">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.213.98l14.523-.84c.84-.046.933-.56.933-1.166V6.354c0-.606-.233-.933-.746-.887l-15.177.887c-.56.047-.746.327-.746.933zm14.337.746c.093.42 0 .84-.42.887l-.7.14v10.264c-.606.327-1.166.514-1.633.514-.746 0-.933-.234-1.492-.933l-4.577-7.186v6.952l1.446.327s0 .84-1.166.84l-3.22.187c-.093-.187 0-.653.327-.746l.84-.233V9.854l-1.166-.093c-.093-.42.14-1.026.793-1.073l3.454-.233 4.764 7.279V9.34l-1.213-.14c-.093-.514.28-.887.746-.933z"/></svg>
+        <span id="notionLinkLabel">Ver en Notion</span>
+    </a>
 </div>
 
 <div class="container">
@@ -546,6 +550,20 @@
         if (recognition) { try { recognition.stop(); } catch(e) {} }
     }
 
+    const notionLinks = {
+        recorrido: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
+        reunion: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
+        pendientes_laboral: { url: 'https://app.notion.com/2e8300bb4e07801d956ad5b17dcb9ae0', label: 'Cosas por hacer' },
+        pendientes_personal: { url: 'https://app.notion.com/314251bb4aa3416eba4566fc2708a516', label: 'Pendientes Personales' }
+    };
+
+    function updateNotionLink() {
+        const key = currentMode === 'pendientes' ? ('pendientes_' + currentTaskType) : currentMode;
+        const info = notionLinks[key] || notionLinks.recorrido;
+        document.getElementById('notionLinkBtn').href = info.url;
+        document.getElementById('notionLinkLabel').textContent = 'Ver en Notion — ' + info.label;
+    }
+
     function setMode(mode) {
         currentMode = mode;
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
@@ -571,6 +589,7 @@
         }
         renderNotes();
         updateStats();
+        updateNotionLink();
     }
 
     function renderSentimentButtons() {
@@ -659,6 +678,7 @@
             if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
         });
         renderNotes();
+        updateNotionLink();
     }
 
     function addTask() {
