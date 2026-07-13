@@ -771,7 +771,7 @@
         buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg);
         updateWhatsAppLink();
 
-        if (currentMode === 'reunion') {
+        if (currentMode === 'reunion' || currentMode === 'recorrido') {
             sendToNotion();
         }
     }
@@ -812,6 +812,7 @@
         t += '\n━━━━━━━━━━━━━━━━━━\n_Generado con OpsNotes_';
         summaryText = t;
         updateWhatsAppLink();
+        sendToNotion();
     }
 
     function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg) {
@@ -878,6 +879,7 @@
         document.getElementById('modalOverlay').classList.add('visible');
         summaryText = t;
         updateWhatsAppLink();
+        sendToNotion();
     }
 
     function shareEmail() {
