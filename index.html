@@ -275,6 +275,11 @@
 
     <div class="stats-row" id="statsRow" style="display:none"></div>
 
+    <div class="sentiment-row task-type-selector" id="taskTypeRowTop" style="display:none; margin-bottom:12px">
+        <button class="sentiment-btn active-neutral" data-type="laboral" onclick="setTaskType('laboral')">💼 Laboral</button>
+        <button class="sentiment-btn" data-type="personal" onclick="setTaskType('personal')">🏠 Personal</button>
+    </div>
+
     <div class="notes-list" id="notesList">
         <div class="empty-state" id="emptyState">
             <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -304,10 +309,6 @@
         <div class="voice-status" id="voiceStatus">🔴 Escuchando... habla ahora</div>
 
         <div id="taskForm" style="display:none">
-            <div class="sentiment-row" id="taskTypeRow" style="margin-bottom:12px">
-                <button class="sentiment-btn active-neutral" data-type="laboral" onclick="setTaskType('laboral')">💼 Laboral</button>
-                <button class="sentiment-btn" data-type="personal" onclick="setTaskType('personal')">🏠 Personal</button>
-            </div>
             <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📋 Nombre de la tarea</label>
             <textarea class="text-input" id="taskName" placeholder="Ej: Revisar inventario de Fruver..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -532,6 +533,7 @@
         document.getElementById('normalInputRow').style.display = isTask ? 'none' : 'flex';
         document.getElementById('sentimentRow').style.display = isTask ? 'none' : 'flex';
         document.getElementById('statsRow').style.display = isTask ? 'none' : 'flex';
+        document.getElementById('taskTypeRowTop').style.display = isTask ? 'flex' : 'none';
 
         if (!isTask) {
             document.getElementById('noteInput').placeholder = cfg.placeholder;
@@ -626,10 +628,11 @@
 
     function setTaskType(type) {
         currentTaskType = type;
-        document.querySelectorAll('#taskTypeRow .sentiment-btn').forEach(b => {
+        document.querySelectorAll('.task-type-selector .sentiment-btn').forEach(b => {
             b.className = 'sentiment-btn';
             if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
         });
+        renderNotes();
     }
 
     function addTask() {
@@ -667,28 +670,28 @@
     function renderNotes() {
         const list = document.getElementById('notesList');
         const modeNotes = notes.filter(n => n.mode === currentMode);
+
+        if (currentMode === 'pendientes') {
+            const filtered = modeNotes.filter(n => (n.taskType || 'laboral') === currentTaskType);
+            if (filtered.length === 0) {
+                const blockLabel = currentTaskType === 'personal' ? 'personales' : 'laborales';
+                list.innerHTML = '';
+                const d = document.createElement('div');
+                d.className = 'empty-state';
+                d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay tareas ' + blockLabel + '.<br>Completa el formulario de abajo.</p>';
+                list.appendChild(d);
+                return;
+            }
+            list.innerHTML = [...filtered].reverse().map(renderTaskCard).join('');
+            return;
+        }
+
         if (modeNotes.length === 0) {
             list.innerHTML = '';
             const d = document.createElement('div');
             d.className = 'empty-state';
-            d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay ' + (currentMode === 'pendientes' ? 'tareas.<br>Completa el formulario de arriba.' : 'notas.<br>Comienza a escribir o dictar.') + '</p>';
+            d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay notas.<br>Comienza a escribir o dictar.</p>';
             list.appendChild(d);
-            return;
-        }
-
-        if (currentMode === 'pendientes') {
-            const laboral = modeNotes.filter(n => (n.taskType || 'laboral') === 'laboral');
-            const personal = modeNotes.filter(n => n.taskType === 'personal');
-            let html = '';
-            if (laboral.length) {
-                html += '<div style="font-size:0.75rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin:4px 0 8px">💼 Laboral (' + laboral.length + ')</div>';
-                html += [...laboral].reverse().map(renderTaskCard).join('');
-            }
-            if (personal.length) {
-                html += '<div style="font-size:0.75rem;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;margin:' + (laboral.length ? '18px' : '4px') + ' 0 8px">🏠 Personal (' + personal.length + ')</div>';
-                html += [...personal].reverse().map(renderTaskCard).join('');
-            }
-            list.innerHTML = html;
             return;
         }
 
