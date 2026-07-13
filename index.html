@@ -388,6 +388,16 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="confirmOverlay">
+    <div class="modal" style="max-width:340px;padding:24px;text-align:center">
+        <p id="confirmMessage" style="font-size:0.95rem;color:var(--text);margin-bottom:20px;line-height:1.5"></p>
+        <div style="display:flex;gap:10px">
+            <button onclick="closeConfirm()" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--card);font-weight:700;font-family:inherit;cursor:pointer">Cancelar</button>
+            <button id="confirmOkBtn" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:700;font-family:inherit;cursor:pointer">Borrar</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1039,9 +1049,31 @@
 
     function closeModal() { document.getElementById('modalOverlay').classList.remove('visible'); }
 
+    function showConfirm(message, onConfirm) {
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmOverlay').classList.add('visible');
+        const btn = document.getElementById('confirmOkBtn');
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => {
+            closeConfirm();
+            onConfirm();
+        });
+    }
+
+    function closeConfirm() {
+        document.getElementById('confirmOverlay').classList.remove('visible');
+    }
+
     function clearAll() {
         if (notes.length === 0) return;
-        if (confirm('¿Borrar todas las notas guardadas? Esta acción no se puede deshacer.')) { notes = []; renderNotes(); updateStats(); saveNotes(); showToast('🗑️ Eliminadas'); }
+        showConfirm('¿Borrar todas las notas guardadas? Esta acción no se puede deshacer.', () => {
+            notes = [];
+            renderNotes();
+            updateStats();
+            saveNotes();
+            showToast('🗑️ Eliminadas');
+        });
     }
 
     function showToast(msg) {
@@ -1055,6 +1087,7 @@
     function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
     document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+    document.getElementById('confirmOverlay').addEventListener('click', (e) => { if (e.target === document.getElementById('confirmOverlay')) closeConfirm(); });
     document.getElementById('noteInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addNote(); } });
     document.getElementById('noteInput').addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
 
