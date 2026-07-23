@@ -63,7 +63,7 @@
         .header-subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
         .note-count { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
         .container { max-width: 640px; margin: 0 auto; padding: 16px; }
-        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 16px; }
         .mode-btn { padding: 12px 8px; border: 2px solid var(--border); border-radius: 12px; background: var(--card); cursor: pointer; text-align: center; transition: all 0.2s; font-size: 0.75rem; font-weight: 600; color: var(--text-light); font-family: inherit; }
         .mode-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
         .mode-btn svg { display: block; margin: 0 auto 6px; width: 28px; height: 28px; }
@@ -246,6 +246,10 @@
             <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             Pendientes
         </button>
+        <button class="mode-btn" data-mode="podcast" onclick="setMode('podcast')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            Podcast
+        </button>
     </div>
 
     <div class="store-info visible" id="storeInfo">
@@ -281,6 +285,15 @@
         <div style="margin-top:12px">
             <label>👥 Participantes</label>
             <input type="text" id="meetingParticipants" placeholder="Ej: Carlos, Ana, Jefe RRHH">
+        </div>
+    </div>
+
+    <div class="store-info" id="podcastInfo">
+        <label>🎙️ Título del Podcast</label>
+        <input type="text" id="podcastTitle" placeholder="Ej: The Tim Ferriss Show — Ep. 512">
+        <div style="margin-top:12px">
+            <label>🗣️ Invitado</label>
+            <input type="text" id="podcastGuest" placeholder="Ej: Naval Ravikant">
         </div>
     </div>
 
@@ -449,9 +462,20 @@
             icon: '✅',
             notionTipo: 'Pendientes',
             isTaskMode: true
+        },
+        podcast: {
+            label: 'Resumen Podcast',
+            icon: '🎙️',
+            notionTipo: 'Podcast',
+            placeholder: 'Escribe o dicta lo que vas escuchando...',
+            categories: [
+                { key: 'apunte', label: 'Apunte', cls: 'neutral' },
+                { key: 'recordatorio', label: 'Recordatorio', cls: 'negative' }
+            ],
+            summaryTitles: { apunte: '📝 Apuntes', recordatorio: '⏰ Recordatorios' }
         }
     };
-    const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label };
+    const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label, podcast: modeConfig.podcast.label };
 
     if (navigator.share) { document.getElementById('nativeShareBtn').style.display = 'flex'; }
 
@@ -588,7 +612,8 @@
         recorrido: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
         reunion: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
         pendientes_laboral: { url: 'https://app.notion.com/2e8300bb4e07801d956ad5b17dcb9ae0', label: 'Cosas por hacer' },
-        pendientes_personal: { url: 'https://app.notion.com/314251bb4aa3416eba4566fc2708a516', label: 'Pendientes Personales' }
+        pendientes_personal: { url: 'https://app.notion.com/314251bb4aa3416eba4566fc2708a516', label: 'Pendientes Personales' },
+        podcast: { url: 'https://app.notion.com/d7df97524e774c8e88e0954359e1f685', label: 'Resumen Podcast' }
     };
 
     function updateNotionLink() {
@@ -603,6 +628,7 @@
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         document.getElementById('storeInfo').classList.toggle('visible', mode === 'recorrido');
         document.getElementById('meetingInfo').classList.toggle('visible', mode === 'reunion');
+        document.getElementById('podcastInfo').classList.toggle('visible', mode === 'podcast');
         document.getElementById('compromisoDateWrap').style.display = 'none';
 
         const cfg = modeConfig[mode];
@@ -824,6 +850,8 @@
         const managerName = currentMode === 'recorrido' ? document.getElementById('managerName').value.trim() : '';
         const meetingTopic = currentMode === 'reunion' ? document.getElementById('meetingTopic').value.trim() : '';
         const meetingParticipants = currentMode === 'reunion' ? document.getElementById('meetingParticipants').value.trim() : '';
+        const podcastTitle = currentMode === 'podcast' ? document.getElementById('podcastTitle').value.trim() : '';
+        const podcastGuest = currentMode === 'podcast' ? document.getElementById('podcastGuest').value.trim() : '';
         const now = new Date();
         const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
@@ -833,6 +861,8 @@
         if (managerName) html += '<p><strong>👤 Administrador:</strong> ' + escapeHtml(managerName) + '</p>';
         if (meetingTopic) html += '<p><strong>📌 Asunto:</strong> ' + escapeHtml(meetingTopic) + '</p>';
         if (meetingParticipants) html += '<p><strong>👥 Participantes:</strong> ' + escapeHtml(meetingParticipants) + '</p>';
+        if (podcastTitle) html += '<p><strong>🎙️ Podcast:</strong> ' + escapeHtml(podcastTitle) + '</p>';
+        if (podcastGuest) html += '<p><strong>🗣️ Invitado:</strong> ' + escapeHtml(podcastGuest) + '</p>';
         html += '<p><strong>📝 Total:</strong> ' + modeNotes.length + '</p></div>';
 
         cfg.categories.forEach(cat => {
@@ -848,14 +878,14 @@
 
         document.getElementById('modalBody').innerHTML = html;
         document.getElementById('modalOverlay').classList.add('visible');
-        buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg);
+        buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg, podcastTitle, podcastGuest);
 
         if (currentMode === 'recorrido' && selectedAdminPhone) {
             document.getElementById('whatsappNumber').value = '+57' + selectedAdminPhone;
         }
         updateWhatsAppLink();
 
-        if (currentMode === 'reunion' || currentMode === 'recorrido') {
+        if (currentMode === 'reunion' || currentMode === 'recorrido' || currentMode === 'podcast') {
             sendToNotion();
         }
     }
@@ -899,12 +929,14 @@
         sendToNotion();
     }
 
-    function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg) {
+    function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg, podcastTitle, podcastGuest) {
         let t = cfg.icon + ' *RESUMEN — ' + cfg.label.toUpperCase() + '*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n';
         if (storeName) t += '🏪 Tienda: ' + storeName + '\n';
         if (managerName) t += '👤 Administrador: ' + managerName + '\n';
         if (meetingTopic) t += '📌 Asunto: ' + meetingTopic + '\n';
         if (meetingParticipants) t += '👥 Participantes: ' + meetingParticipants + '\n';
+        if (podcastTitle) t += '🎙️ Podcast: ' + podcastTitle + '\n';
+        if (podcastGuest) t += '🗣️ Invitado: ' + podcastGuest + '\n';
         t += '📝 Total: ' + modeNotes.length + '\n━━━━━━━━━━━━━━━━━━\n\n';
         cfg.categories.forEach(cat => {
             const items = modeNotes.filter(n => n.category === cat.key);
@@ -929,7 +961,7 @@
         let html = '<div class="summary-meta"><p><strong>📅 Agenda del día:</strong> ' + dateStr + '</p><p><strong>🕐 Generado:</strong> ' + timeStr + '</p><p><strong>📝 Total registros:</strong> ' + notes.length + '</p></div>';
         let t = '📅 *AGENDA DEL DÍA*\n━━━━━━━━━━━━━━━━━━\n' + dateStr + '\n━━━━━━━━━━━━━━━━━━\n\n';
 
-        ['recorrido', 'reunion', 'pendientes'].forEach(modeKey => {
+        ['recorrido', 'reunion', 'pendientes', 'podcast'].forEach(modeKey => {
             const modeNotes = notes.filter(n => n.mode === modeKey);
             if (modeNotes.length === 0) return;
             const cfg = modeConfig[modeKey];
@@ -1020,6 +1052,39 @@
                 } else {
                     showToast('⚠️ Algo falló al enviar, revisa Notion');
                     console.error('Notion pending split error', data);
+                }
+            } catch (err) {
+                showToast('⚠️ Error al conectar con el puente de Notion');
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+            return;
+        }
+
+        // Podcast → página en "Resumen Podcast — OpsNotes" (ESPACIO PERSONAL)
+        if (!isDailySummary && currentMode === 'podcast') {
+            const dateISO = new Date().toISOString().split('T')[0];
+            const podcastTitle = document.getElementById('podcastTitle').value.trim();
+            const podcastGuest = document.getElementById('podcastGuest').value.trim();
+            const pageTitle = (podcastTitle || 'Podcast') + (podcastGuest ? ' — ' + podcastGuest : '');
+
+            try {
+                const params = new URLSearchParams({
+                    podcastTitle: podcastTitle,
+                    podcastGuest: podcastGuest,
+                    dateISO: dateISO,
+                    title: pageTitle,
+                    content: summaryText
+                });
+                const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
+                const data = await response.json();
+                if (data.ok) {
+                    showToast('✅ Enviado a Notion — Resumen Podcast');
+                } else {
+                    showToast('⚠️ Notion: ' + (data.error || 'error desconocido'));
+                    console.error('Notion podcast error', data);
                 }
             } catch (err) {
                 showToast('⚠️ Error al conectar con el puente de Notion');
