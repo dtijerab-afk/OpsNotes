@@ -333,14 +333,30 @@
         <div class="voice-status" id="voiceStatus">🔴 Escuchando... habla ahora</div>
 
         <div id="taskForm" style="display:none">
+            <div id="taskStoreWrap" style="display:none; margin-bottom:12px">
+                <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">🏪 Tienda</label>
+                <div class="select-wrapper">
+                    <select id="taskStore" style="width:100%;padding:12px 40px 12px 14px;border:2px solid var(--border);border-radius:10px;background:var(--card);font-size:0.9rem;font-family:inherit;color:var(--text)">
+                        <option value="" disabled selected>— Elige una tienda —</option>
+                        <option value="Único">Único</option>
+                        <option value="Calle 30">Calle 30</option>
+                        <option value="Soledad">Soledad</option>
+                        <option value="Alkarawi">Alkarawi</option>
+                        <option value="Bostón">Bostón</option>
+                        <option value="Santo Tomás">Santo Tomás</option>
+                        <option value="Nuestro">Nuestro</option>
+                        <option value="Villacampestre">Villacampestre</option>
+                    </select>
+                </div>
+            </div>
             <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📋 Nombre de la tarea</label>
             <textarea class="text-input" id="taskName" placeholder="Ej: Revisar inventario de Fruver..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div id="taskFieldsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
                 <div>
-                    <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite</label>
+                    <label id="taskDueDateLabel" style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite</label>
                     <input type="date" id="taskDueDate" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
                 </div>
-                <div>
+                <div id="taskResponsibleWrap">
                     <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">👤 Responsable</label>
                     <input type="text" id="taskResponsible" placeholder="Ej: Carlos" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
                 </div>
@@ -737,6 +753,13 @@
             b.className = 'sentiment-btn';
             if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
         });
+
+        const isLaboral = type === 'laboral';
+        document.getElementById('taskStoreWrap').style.display = isLaboral ? 'block' : 'none';
+        document.getElementById('taskResponsibleWrap').style.display = isLaboral ? 'none' : 'block';
+        document.getElementById('taskFieldsGrid').style.gridTemplateColumns = isLaboral ? '1fr' : '1fr 1fr';
+        document.getElementById('taskDueDateLabel').textContent = isLaboral ? '📅 Fecha de entrega' : '📅 Fecha límite';
+
         renderNotes();
         updateNotionLink();
     }
@@ -745,8 +768,9 @@
         const taskName = document.getElementById('taskName').value.trim();
         if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
         const dueDate = document.getElementById('taskDueDate').value;
-        const responsible = document.getElementById('taskResponsible').value.trim();
+        const responsible = currentTaskType === 'laboral' ? '' : document.getElementById('taskResponsible').value.trim();
         const description = document.getElementById('taskDescription').value.trim();
+        const store = currentTaskType === 'laboral' ? document.getElementById('taskStore').value : '';
 
         notes.push({
             id: Date.now(),
@@ -754,6 +778,7 @@
             dueDate: dueDate || '',
             responsible: responsible,
             description: description,
+            store: store,
             taskType: currentTaskType,
             mode: 'pendientes',
             cls: 'neutral',
@@ -764,6 +789,7 @@
         document.getElementById('taskDueDate').value = '';
         document.getElementById('taskResponsible').value = '';
         document.getElementById('taskDescription').value = '';
+        if (document.getElementById('taskStore')) document.getElementById('taskStore').value = '';
 
         renderNotes();
         updateStats();
@@ -810,6 +836,7 @@
 
     function renderTaskCard(n) {
         let extra = '';
+        if (n.store) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">🏪 ' + escapeHtml(n.store) + '</div>';
         if (n.dueDate) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>';
         if (n.responsible) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:2px">👤 ' + escapeHtml(n.responsible) + '</div>';
         if (n.description) extra += '<div style="font-size:0.82rem;color:var(--text);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">' + escapeHtml(n.description) + '</div>';
@@ -907,12 +934,14 @@
             t += '*' + group.label.toUpperCase() + ' (' + group.items.length + ')*\n';
             group.items.forEach((n, i) => {
                 html += '<div class="summary-item"><strong>' + escapeHtml(n.text) + '</strong>';
+                if (n.store) html += '<br>🏪 ' + escapeHtml(n.store);
                 if (n.dueDate) html += '<br>📅 ' + formatDateEs(n.dueDate);
                 if (n.responsible) html += '<br>👤 ' + escapeHtml(n.responsible);
                 if (n.description) html += '<br>📝 ' + escapeHtml(n.description);
                 html += '</div>';
 
                 t += (i + 1) + '. ' + n.text + '\n';
+                if (n.store) t += '   🏪 ' + n.store + '\n';
                 if (n.dueDate) t += '   📅 ' + formatDateEs(n.dueDate) + '\n';
                 if (n.responsible) t += '   👤 ' + n.responsible + '\n';
                 if (n.description) t += '   📝 ' + n.description + '\n';
@@ -1023,7 +1052,7 @@
         if (!isDailySummary && currentMode === 'pendientes') {
             const allTasks = notes.filter(n => n.mode === 'pendientes');
             const laboral = allTasks.filter(n => (n.taskType || 'laboral') === 'laboral').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || ''
+                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', store: n.store || ''
             }));
             const personal = allTasks.filter(n => n.taskType === 'personal').map(n => ({
                 text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || ''
