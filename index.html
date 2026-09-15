@@ -148,6 +148,14 @@
         .note-time { font-size: 0.7rem; color: var(--text-light); }
         .note-text { font-size: 0.9rem; line-height: 1.5; color: var(--text); padding-right: 20px; }
         .note-delete { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-light); cursor: pointer; opacity: 0.4; font-size: 1.1rem; padding: 4px; transition: opacity 0.2s; }
+        .note-edit { position: absolute; top: 10px; right: 36px; background: none; border: none; color: var(--primary); cursor: pointer; opacity: 0.5; font-size: 0.95rem; padding: 4px; transition: opacity 0.2s; }
+        .note-edit:hover { opacity: 1; }
+        .note-done { position: absolute; top: 10px; right: 62px; background: none; border: none; cursor: pointer; opacity: 0.5; font-size: 1rem; padding: 4px; transition: opacity 0.2s; }
+        .note-done:hover { opacity: 1; }
+        .task-overdue { border-left-color: var(--danger) !important; background: var(--danger-bg) !important; }
+        .task-due-soon { border-left-color: var(--warning) !important; background: var(--warning-bg) !important; }
+        .task-completed { opacity: 0.6; }
+        .task-completed .note-text { text-decoration: line-through; }
         .note-delete:hover { opacity: 1; color: var(--danger); }
         .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; z-index: 100; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05); }
         .bottom-bar .btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; font-family: inherit; }
@@ -491,6 +499,8 @@
     let summaryText = '';
     let isDailySummary = false;
     let currentTaskType = 'laboral';
+    let editingNoteId = null;
+    let editingTaskId = null;
 
     const modeConfig = {
         recorrido: {
@@ -683,6 +693,8 @@
 
     function setMode(mode) {
         currentMode = mode;
+        editingNoteId = null;
+        editingTaskId = null;
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         document.getElementById('storeInfo').classList.toggle('visible', mode === 'recorrido');
         document.getElementById('meetingInfo').classList.toggle('visible', mode === 'reunion');
@@ -770,6 +782,24 @@
 
     function addNoteInternal(text) {
         const meta = getCategoryMeta(currentMode, currentSentiment);
+        const dueDateVal = meta.hasDate ? document.getElementById('compromisoDate').value : '';
+
+        if (editingNoteId) {
+            const existing = notes.find(n => n.id === editingNoteId);
+            if (existing) {
+                existing.text = text;
+                existing.category = currentSentiment;
+                existing.cls = meta.cls;
+                if (meta.hasDate) { existing.dueDate = dueDateVal; } else { delete existing.dueDate; }
+            }
+            editingNoteId = null;
+            renderNotes();
+            updateStats();
+            saveNotes();
+            showToast('✅ Nota actualizada');
+            return;
+        }
+
         const note = {
             id: Date.now(),
             text: text,
@@ -778,15 +808,40 @@
             mode: currentMode,
             time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
         };
-        if (meta.hasDate) {
-            const dateVal = document.getElementById('compromisoDate').value;
-            if (dateVal) note.dueDate = dateVal;
+        if (meta.hasDate && dueDateVal) {
+            note.dueDate = dueDateVal;
         }
         notes.push(note);
         renderNotes();
         updateStats();
         saveNotes();
         showToast('✅ ' + meta.label + ' agregado');
+    }
+
+    function editNote(id) {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        editingNoteId = id;
+
+        const input = document.getElementById('noteInput');
+        input.value = note.text;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        input.focus();
+
+        currentSentiment = note.category;
+        document.querySelectorAll('#sentimentRow .sentiment-btn').forEach(b => {
+            b.className = 'sentiment-btn';
+            if (b.dataset.key === note.category) b.classList.add('active-' + b.dataset.cls);
+        });
+
+        const meta = getCategoryMeta(currentMode, note.category);
+        if (meta && meta.hasDate) {
+            document.getElementById('compromisoDateWrap').style.display = 'block';
+            document.getElementById('compromisoDate').value = note.dueDate || '';
+        }
+
+        showToast('✏️ Editando — modifica el texto y toca ➕ para guardar');
     }
 
     function setTaskType(type) {
@@ -814,6 +869,25 @@
         const description = document.getElementById('taskDescription').value.trim();
         const store = currentTaskType === 'laboral' ? document.getElementById('taskStore').value : '';
 
+        if (editingTaskId) {
+            const existing = notes.find(n => n.id === editingTaskId);
+            if (existing) {
+                existing.text = taskName;
+                existing.dueDate = dueDate || '';
+                existing.responsible = responsible;
+                existing.description = description;
+                existing.store = store;
+                existing.taskType = currentTaskType;
+            }
+            editingTaskId = null;
+            clearTaskForm();
+            renderNotes();
+            updateStats();
+            saveNotes();
+            showToast('✅ Tarea actualizada');
+            return;
+        }
+
         notes.push({
             id: Date.now(),
             text: taskName,
@@ -827,19 +901,47 @@
             time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
         });
 
-        document.getElementById('taskName').value = '';
-        document.getElementById('taskDueDate').value = '';
-        document.getElementById('taskResponsible').value = '';
-        document.getElementById('taskDescription').value = '';
-        if (document.getElementById('taskStore')) document.getElementById('taskStore').value = '';
-
+        clearTaskForm();
         renderNotes();
         updateStats();
         saveNotes();
         showToast('✅ Tarea agregada');
     }
 
-    function deleteNote(id) { notes = notes.filter(n => n.id !== id); renderNotes(); updateStats(); saveNotes(); }
+    function clearTaskForm() {
+        document.getElementById('taskName').value = '';
+        document.getElementById('taskDueDate').value = '';
+        document.getElementById('taskResponsible').value = '';
+        document.getElementById('taskDescription').value = '';
+        if (document.getElementById('taskStore')) document.getElementById('taskStore').value = '';
+    }
+
+    function editTask(id) {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        editingTaskId = id;
+
+        setTaskType(note.taskType || 'laboral');
+        document.getElementById('taskName').value = note.text;
+        document.getElementById('taskDueDate').value = note.dueDate || '';
+        document.getElementById('taskDescription').value = note.description || '';
+        if (note.taskType === 'laboral') {
+            if (document.getElementById('taskStore')) document.getElementById('taskStore').value = note.store || '';
+        } else {
+            document.getElementById('taskResponsible').value = note.responsible || '';
+        }
+        document.getElementById('taskName').focus();
+        showToast('✏️ Editando tarea — modifica y toca "Agregar Tarea" para guardar');
+    }
+
+    function deleteNote(id) {
+        notes = notes.filter(n => n.id !== id);
+        if (editingNoteId === id) editingNoteId = null;
+        if (editingTaskId === id) editingTaskId = null;
+        renderNotes();
+        updateStats();
+        saveNotes();
+    }
 
     function renderNotes() {
         const list = document.getElementById('notesList');
@@ -872,8 +974,29 @@
         list.innerHTML = [...modeNotes].reverse().map(n => {
             const label = getCategoryMeta(n.mode, n.category).label;
             const dateLine = n.dueDate ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>' : '';
-            return '<div class="note-card ' + n.cls + '"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div>' + dateLine + '</div>';
+            return '<div class="note-card ' + n.cls + '"><button class="note-edit" onclick="editNote(' + n.id + ')">✏️</button><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div>' + dateLine + '</div>';
         }).join('');
+    }
+
+    function getDueDateStatus(dueDate) {
+        if (!dueDate) return '';
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const due = new Date(dueDate + 'T00:00:00');
+        const diffDays = Math.round((due - today) / 86400000);
+        if (diffDays < 0) return 'task-overdue';
+        if (diffDays <= 1) return 'task-due-soon';
+        return '';
+    }
+
+    function toggleTaskDone(id) {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+        note.completed = !note.completed;
+        renderNotes();
+        updateStats();
+        saveNotes();
+        showToast(note.completed ? '✅ Marcada como Listo' : '↩️ Marcada como pendiente');
     }
 
     function renderTaskCard(n) {
@@ -882,7 +1005,13 @@
         if (n.dueDate) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>';
         if (n.responsible) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:2px">👤 ' + escapeHtml(n.responsible) + '</div>';
         if (n.description) extra += '<div style="font-size:0.82rem;color:var(--text);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">' + escapeHtml(n.description) + '</div>';
-        return '<div class="note-card neutral"><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge neutral">Tarea</span><span class="note-time">' + n.time + '</span></div><div class="note-text" style="font-weight:600">' + escapeHtml(n.text) + '</div>' + extra + '</div>';
+
+        const dueClass = n.completed ? '' : getDueDateStatus(n.dueDate);
+        const cardClass = 'note-card neutral' + (dueClass ? ' ' + dueClass : '') + (n.completed ? ' task-completed' : '');
+        const badgeLabel = n.completed ? '✅ Listo' : 'Tarea';
+        const doneIcon = n.completed ? '↩️' : '✅';
+
+        return '<div class="' + cardClass + '"><button class="note-done" onclick="toggleTaskDone(' + n.id + ')" title="' + (n.completed ? 'Marcar como pendiente' : 'Marcar como Listo') + '">' + doneIcon + '</button><button class="note-edit" onclick="editTask(' + n.id + ')">✏️</button><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge neutral">' + badgeLabel + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text" style="font-weight:600">' + escapeHtml(n.text) + '</div>' + extra + '</div>';
     }
 
     function formatDateEs(iso) {
@@ -975,14 +1104,15 @@
             html += '<div class="summary-section"><h3 class="neutral">' + group.label + ' (' + group.items.length + ')</h3>';
             t += '*' + group.label.toUpperCase() + ' (' + group.items.length + ')*\n';
             group.items.forEach((n, i) => {
-                html += '<div class="summary-item"><strong>' + escapeHtml(n.text) + '</strong>';
+                const doneTag = n.completed ? ' ✅' : '';
+                html += '<div class="summary-item"' + (n.completed ? ' style="text-decoration:line-through;opacity:0.6"' : '') + '><strong>' + escapeHtml(n.text) + '</strong>' + doneTag;
                 if (n.store) html += '<br>🏪 ' + escapeHtml(n.store);
                 if (n.dueDate) html += '<br>📅 ' + formatDateEs(n.dueDate);
                 if (n.responsible) html += '<br>👤 ' + escapeHtml(n.responsible);
                 if (n.description) html += '<br>📝 ' + escapeHtml(n.description);
                 html += '</div>';
 
-                t += (i + 1) + '. ' + n.text + '\n';
+                t += (i + 1) + '. ' + (n.completed ? '✅ ' : '') + n.text + '\n';
                 if (n.store) t += '   🏪 ' + n.store + '\n';
                 if (n.dueDate) t += '   📅 ' + formatDateEs(n.dueDate) + '\n';
                 if (n.responsible) t += '   👤 ' + n.responsible + '\n';
@@ -1094,10 +1224,10 @@
         if (!isDailySummary && currentMode === 'pendientes') {
             const allTasks = notes.filter(n => n.mode === 'pendientes');
             const laboral = allTasks.filter(n => (n.taskType || 'laboral') === 'laboral').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', store: n.store || ''
+                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', store: n.store || '', completed: !!n.completed
             }));
             const personal = allTasks.filter(n => n.taskType === 'personal').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || ''
+                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', completed: !!n.completed
             }));
 
             if (laboral.length === 0 && personal.length === 0) {
@@ -1260,13 +1390,15 @@
     }
 
     function clearAll() {
-        if (notes.length === 0) return;
-        showConfirm('¿Borrar todas las notas guardadas? Esta acción no se puede deshacer.', () => {
-            notes = [];
+        const modeNotes = notes.filter(n => n.mode === currentMode);
+        if (modeNotes.length === 0) return;
+        const areaLabel = modeLabels[currentMode];
+        showConfirm('¿Borrar todas las notas de "' + areaLabel + '"? Esta acción no se puede deshacer.', () => {
+            notes = notes.filter(n => n.mode !== currentMode);
             renderNotes();
             updateStats();
             saveNotes();
-            showToast('🗑️ Eliminadas');
+            showToast('🗑️ ' + areaLabel + ' — Eliminadas');
         });
     }
 
