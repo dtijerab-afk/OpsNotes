@@ -215,6 +215,48 @@
 </head>
 <body>
 
+<div id="lockScreen" style="position:fixed; inset:0; background:linear-gradient(135deg, #1e40af, #1a56db); z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:24px;">
+    <div style="background:white; border-radius:20px; padding:32px 28px; max-width:340px; width:100%; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+        <div style="font-size:2.5rem; margin-bottom:8px;">🔒</div>
+        <h2 style="font-size:1.2rem; font-weight:700; color:#1e293b; margin-bottom:6px;">OpsNotes</h2>
+        <p style="font-size:0.85rem; color:#64748b; margin-bottom:20px;">Ingresa el PIN para continuar</p>
+        <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinInput" maxlength="6" placeholder="••••••" style="width:100%; padding:14px; border:2px solid #e2e8f0; border-radius:12px; font-size:1.4rem; text-align:center; letter-spacing:8px; font-family:inherit; margin-bottom:14px;">
+        <button onclick="checkPin()" style="width:100%; padding:14px; background:#1a56db; color:white; border:none; border-radius:12px; font-size:1rem; font-weight:700; font-family:inherit; cursor:pointer;">Entrar</button>
+        <p id="pinError" style="font-size:0.8rem; color:#dc2626; margin-top:12px; display:none;">PIN incorrecto, intenta de nuevo</p>
+    </div>
+</div>
+
+<script>
+    const APP_PIN = '110505';
+    (function initLock() {
+        if (localStorage.getItem('opsnotes_unlocked') === 'true') {
+            document.getElementById('lockScreen').style.display = 'none';
+        }
+    })();
+
+    function checkPin() {
+        const input = document.getElementById('pinInput');
+        if (input.value === APP_PIN) {
+            localStorage.setItem('opsnotes_unlocked', 'true');
+            document.getElementById('lockScreen').style.display = 'none';
+        } else {
+            document.getElementById('pinError').style.display = 'block';
+            input.value = '';
+            input.focus();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const pinInput = document.getElementById('pinInput');
+        if (pinInput) {
+            pinInput.focus();
+            pinInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') checkPin();
+            });
+        }
+    });
+</script>
+
 <div class="header">
     <div class="header-top">
         <div>
