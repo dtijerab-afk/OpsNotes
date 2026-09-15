@@ -366,7 +366,10 @@
 
         <div class="store-info" id="compromisoDateWrap" style="display:none; margin-bottom:12px; padding:12px;">
             <label>📅 Fecha del compromiso</label>
-            <input type="date" id="compromisoDate">
+            <div style="display:flex; gap:8px">
+                <input type="date" id="compromisoDate" style="flex:1">
+                <input type="time" id="compromisoTime" style="flex:1" title="Hora (opcional) — para el recordatorio en Google Calendar">
+            </div>
         </div>
 
         <div class="input-row" id="normalInputRow">
@@ -403,16 +406,21 @@
             <textarea class="text-input" id="taskName" placeholder="Ej: Revisar inventario de Fruver..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
             <div id="taskFieldsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
                 <div>
-                    <label id="taskDueDateLabel" style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite</label>
-                    <input type="date" id="taskDueDate" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
+                    <label id="taskDueDateLabel" style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite *</label>
+                    <div style="display:flex; gap:6px">
+                        <input type="date" id="taskDueDate" required style="flex:1;min-width:0;padding:10px 8px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit">
+                        <input type="time" id="taskDueTime" title="Hora (opcional) — para el recordatorio en Google Calendar" style="flex:1;min-width:0;padding:10px 8px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit">
+                    </div>
                 </div>
                 <div id="taskResponsibleWrap">
                     <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">👤 Responsable</label>
                     <input type="text" id="taskResponsible" placeholder="Ej: Carlos" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
                 </div>
             </div>
-            <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📝 Descripción</label>
-            <textarea class="text-input" id="taskDescription" placeholder="Detalles de la tarea (opcional)..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
+            <div id="taskDescriptionWrap">
+                <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📝 Descripción</label>
+                <textarea class="text-input" id="taskDescription" placeholder="Detalles de la tarea (opcional)..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
+            </div>
             <button class="add-btn" onclick="addTask()" style="width:100%;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Agregar Tarea
@@ -783,6 +791,7 @@
     function addNoteInternal(text) {
         const meta = getCategoryMeta(currentMode, currentSentiment);
         const dueDateVal = meta.hasDate ? document.getElementById('compromisoDate').value : '';
+        const dueTimeVal = meta.hasDate ? document.getElementById('compromisoTime').value : '';
 
         if (editingNoteId) {
             const existing = notes.find(n => n.id === editingNoteId);
@@ -790,7 +799,7 @@
                 existing.text = text;
                 existing.category = currentSentiment;
                 existing.cls = meta.cls;
-                if (meta.hasDate) { existing.dueDate = dueDateVal; } else { delete existing.dueDate; }
+                if (meta.hasDate) { existing.dueDate = dueDateVal; existing.dueTime = dueTimeVal; } else { delete existing.dueDate; delete existing.dueTime; }
             }
             editingNoteId = null;
             renderNotes();
@@ -810,6 +819,7 @@
         };
         if (meta.hasDate && dueDateVal) {
             note.dueDate = dueDateVal;
+            if (dueTimeVal) note.dueTime = dueTimeVal;
         }
         notes.push(note);
         renderNotes();
@@ -839,6 +849,7 @@
         if (meta && meta.hasDate) {
             document.getElementById('compromisoDateWrap').style.display = 'block';
             document.getElementById('compromisoDate').value = note.dueDate || '';
+            document.getElementById('compromisoTime').value = note.dueTime || '';
         }
 
         showToast('✏️ Editando — modifica el texto y toca ➕ para guardar');
@@ -853,9 +864,10 @@
 
         const isLaboral = type === 'laboral';
         document.getElementById('taskStoreWrap').style.display = isLaboral ? 'block' : 'none';
-        document.getElementById('taskResponsibleWrap').style.display = isLaboral ? 'none' : 'block';
-        document.getElementById('taskFieldsGrid').style.gridTemplateColumns = isLaboral ? '1fr' : '1fr 1fr';
-        document.getElementById('taskDueDateLabel').textContent = isLaboral ? '📅 Fecha de entrega' : '📅 Fecha límite';
+        document.getElementById('taskResponsibleWrap').style.display = 'none';
+        document.getElementById('taskDescriptionWrap').style.display = isLaboral ? 'block' : 'none';
+        document.getElementById('taskFieldsGrid').style.gridTemplateColumns = '1fr';
+        document.getElementById('taskDueDateLabel').textContent = isLaboral ? '📅 Fecha de entrega *' : '📅 Fecha límite *';
 
         renderNotes();
         updateNotionLink();
@@ -865,15 +877,19 @@
         const taskName = document.getElementById('taskName').value.trim();
         if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
         const dueDate = document.getElementById('taskDueDate').value;
-        const responsible = currentTaskType === 'laboral' ? '' : document.getElementById('taskResponsible').value.trim();
-        const description = document.getElementById('taskDescription').value.trim();
-        const store = currentTaskType === 'laboral' ? document.getElementById('taskStore').value : '';
+        if (!dueDate) { showToast('⚠️ Elige la fecha límite de la tarea'); return; }
+        const dueTime = document.getElementById('taskDueTime').value;
+        const isLaboral = currentTaskType === 'laboral';
+        const responsible = '';
+        const description = isLaboral ? document.getElementById('taskDescription').value.trim() : '';
+        const store = isLaboral ? document.getElementById('taskStore').value : '';
 
         if (editingTaskId) {
             const existing = notes.find(n => n.id === editingTaskId);
             if (existing) {
                 existing.text = taskName;
                 existing.dueDate = dueDate || '';
+                existing.dueTime = dueTime || '';
                 existing.responsible = responsible;
                 existing.description = description;
                 existing.store = store;
@@ -892,6 +908,7 @@
             id: Date.now(),
             text: taskName,
             dueDate: dueDate || '',
+            dueTime: dueTime || '',
             responsible: responsible,
             description: description,
             store: store,
@@ -911,6 +928,7 @@
     function clearTaskForm() {
         document.getElementById('taskName').value = '';
         document.getElementById('taskDueDate').value = '';
+        document.getElementById('taskDueTime').value = '';
         document.getElementById('taskResponsible').value = '';
         document.getElementById('taskDescription').value = '';
         if (document.getElementById('taskStore')) document.getElementById('taskStore').value = '';
@@ -924,11 +942,10 @@
         setTaskType(note.taskType || 'laboral');
         document.getElementById('taskName').value = note.text;
         document.getElementById('taskDueDate').value = note.dueDate || '';
+        document.getElementById('taskDueTime').value = note.dueTime || '';
         document.getElementById('taskDescription').value = note.description || '';
-        if (note.taskType === 'laboral') {
-            if (document.getElementById('taskStore')) document.getElementById('taskStore').value = note.store || '';
-        } else {
-            document.getElementById('taskResponsible').value = note.responsible || '';
+        if (note.taskType === 'laboral' && document.getElementById('taskStore')) {
+            document.getElementById('taskStore').value = note.store || '';
         }
         document.getElementById('taskName').focus();
         showToast('✏️ Editando tarea — modifica y toca "Agregar Tarea" para guardar');
@@ -973,7 +990,7 @@
 
         list.innerHTML = [...modeNotes].reverse().map(n => {
             const label = getCategoryMeta(n.mode, n.category).label;
-            const dateLine = n.dueDate ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>' : '';
+            const dateLine = n.dueDate ? '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + (n.dueTime ? ' — ' + n.dueTime : '') + '</div>' : '';
             return '<div class="note-card ' + n.cls + '"><button class="note-edit" onclick="editNote(' + n.id + ')">✏️</button><button class="note-delete" onclick="deleteNote(' + n.id + ')">×</button><div class="note-header"><span class="note-badge ' + n.cls + '">' + label + '</span><span class="note-time">' + n.time + '</span></div><div class="note-text">' + escapeHtml(n.text) + '</div>' + dateLine + '</div>';
         }).join('');
     }
@@ -1002,7 +1019,7 @@
     function renderTaskCard(n) {
         let extra = '';
         if (n.store) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">🏪 ' + escapeHtml(n.store) + '</div>';
-        if (n.dueDate) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + '</div>';
+        if (n.dueDate) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:4px">📅 ' + formatDateEs(n.dueDate) + (n.dueTime ? ' — ' + n.dueTime : '') + '</div>';
         if (n.responsible) extra += '<div style="font-size:0.78rem;color:var(--text-light);margin-top:2px">👤 ' + escapeHtml(n.responsible) + '</div>';
         if (n.description) extra += '<div style="font-size:0.82rem;color:var(--text);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">' + escapeHtml(n.description) + '</div>';
 
@@ -1224,10 +1241,10 @@
         if (!isDailySummary && currentMode === 'pendientes') {
             const allTasks = notes.filter(n => n.mode === 'pendientes');
             const laboral = allTasks.filter(n => (n.taskType || 'laboral') === 'laboral').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', store: n.store || '', completed: !!n.completed
+                text: n.text, dueDate: n.dueDate || '', dueTime: n.dueTime || '', responsible: n.responsible || '', description: n.description || '', store: n.store || '', completed: !!n.completed
             }));
             const personal = allTasks.filter(n => n.taskType === 'personal').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', responsible: n.responsible || '', description: n.description || '', completed: !!n.completed
+                text: n.text, dueDate: n.dueDate || '', dueTime: n.dueTime || '', responsible: n.responsible || '', description: n.description || '', completed: !!n.completed
             }));
 
             if (laboral.length === 0 && personal.length === 0) {
@@ -1328,6 +1345,15 @@
                 tienda: storeName,
                 content: summaryText
             });
+
+            if (currentMode === 'reunion') {
+                const compromisos = notes.filter(n => n.mode === 'reunion' && n.category === 'compromisos' && n.dueDate)
+                    .map(n => ({ text: n.text, dueDate: n.dueDate, dueTime: n.dueTime || '' }));
+                if (compromisos.length > 0) {
+                    params.set('calendarItems', JSON.stringify(compromisos));
+                }
+            }
+
             const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
             const data = await response.json();
             if (data.ok) {
