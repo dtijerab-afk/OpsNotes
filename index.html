@@ -81,7 +81,7 @@
         .header-subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
         .note-count { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
         .container { max-width: 640px; margin: 0 auto; padding: 16px; }
-        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 16px; }
+        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
         .mode-btn { padding: 12px 8px; border: 2px solid var(--border); border-radius: 12px; background: var(--card); cursor: pointer; text-align: center; transition: all 0.2s; font-size: 0.75rem; font-weight: 600; color: var(--text-light); font-family: inherit; }
         .mode-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
         .mode-btn svg { display: block; margin: 0 auto 6px; width: 28px; height: 28px; }
@@ -317,10 +317,6 @@
             <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             Pendientes
         </button>
-        <button class="mode-btn" data-mode="podcast" onclick="setMode('podcast')">
-            <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            Podcast
-        </button>
     </div>
 
     <div class="store-info visible" id="storeInfo">
@@ -359,21 +355,7 @@
         </div>
     </div>
 
-    <div class="store-info" id="podcastInfo">
-        <label>🎙️ Título del Podcast</label>
-        <input type="text" id="podcastTitle" placeholder="Ej: The Tim Ferriss Show — Ep. 512">
-        <div style="margin-top:12px">
-            <label>🗣️ Invitado</label>
-            <input type="text" id="podcastGuest" placeholder="Ej: Naval Ravikant">
-        </div>
-    </div>
-
     <div class="stats-row" id="statsRow" style="display:none"></div>
-
-    <div class="sentiment-row task-type-selector" id="taskTypeRowTop" style="display:none; margin-bottom:12px">
-        <button class="sentiment-btn active-neutral" data-type="laboral" onclick="setTaskType('laboral')">💼 Laboral</button>
-        <button class="sentiment-btn" data-type="personal" onclick="setTaskType('personal')">🏠 Personal</button>
-    </div>
 
     <div class="notes-list" id="notesList">
         <div class="empty-state" id="emptyState">
@@ -559,20 +541,9 @@
             icon: '✅',
             notionTipo: 'Pendientes',
             isTaskMode: true
-        },
-        podcast: {
-            label: 'Resumen Podcast',
-            icon: '🎙️',
-            notionTipo: 'Podcast',
-            placeholder: 'Escribe o dicta lo que vas escuchando...',
-            categories: [
-                { key: 'apunte', label: 'Apunte', cls: 'neutral' },
-                { key: 'recordatorio', label: 'Recordatorio', cls: 'negative' }
-            ],
-            summaryTitles: { apunte: '📝 Apuntes', recordatorio: '⏰ Recordatorios' }
         }
     };
-    const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label, podcast: modeConfig.podcast.label };
+    const modeLabels = { recorrido: modeConfig.recorrido.label, reunion: modeConfig.reunion.label, pendientes: modeConfig.pendientes.label };
 
     if (navigator.share) { document.getElementById('nativeShareBtn').style.display = 'flex'; }
 
@@ -709,14 +680,11 @@
     const notionLinks = {
         recorrido: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
         reunion: { url: 'https://app.notion.com/d421793e076540878625f7c2dc2e8fc3', label: 'OpsNotes Registros' },
-        pendientes_laboral: { url: 'https://app.notion.com/2e8300bb4e07801d956ad5b17dcb9ae0', label: 'Cosas por hacer' },
-        pendientes_personal: { url: 'https://app.notion.com/314251bb4aa3416eba4566fc2708a516', label: 'Pendientes Personales' },
-        podcast: { url: 'https://app.notion.com/d7df97524e774c8e88e0954359e1f685', label: 'Resumen Podcast' }
+        pendientes: { url: 'https://app.notion.com/2e8300bb4e07801d956ad5b17dcb9ae0', label: 'Cosas por hacer' }
     };
 
     function updateNotionLink() {
-        const key = currentMode === 'pendientes' ? ('pendientes_' + currentTaskType) : currentMode;
-        const info = notionLinks[key] || notionLinks.recorrido;
+        const info = notionLinks[currentMode] || notionLinks.recorrido;
         document.getElementById('notionLinkBtn').href = info.url;
         document.getElementById('notionLinkLabel').textContent = 'Ver en Notion — ' + info.label;
     }
@@ -728,7 +696,6 @@
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
         document.getElementById('storeInfo').classList.toggle('visible', mode === 'recorrido');
         document.getElementById('meetingInfo').classList.toggle('visible', mode === 'reunion');
-        document.getElementById('podcastInfo').classList.toggle('visible', mode === 'podcast');
         document.getElementById('compromisoDateWrap').style.display = 'none';
 
         const cfg = modeConfig[mode];
@@ -737,7 +704,6 @@
         document.getElementById('normalInputRow').style.display = isTask ? 'none' : 'flex';
         document.getElementById('sentimentRow').style.display = isTask ? 'none' : 'flex';
         document.getElementById('statsRow').style.display = isTask ? 'none' : 'flex';
-        document.getElementById('taskTypeRowTop').style.display = isTask ? 'flex' : 'none';
 
         if (!isTask) {
             document.getElementById('noteInput').placeholder = cfg.placeholder;
@@ -745,7 +711,7 @@
             renderSentimentButtons();
             renderStatsRow();
         } else {
-            setTaskType('laboral');
+            currentTaskType = 'laboral';
         }
         renderNotes();
         updateStats();
@@ -877,22 +843,6 @@
         showToast('✏️ Editando — modifica el texto y toca ➕ para guardar');
     }
 
-    function setTaskType(type) {
-        currentTaskType = type;
-        document.querySelectorAll('.task-type-selector .sentiment-btn').forEach(b => {
-            b.className = 'sentiment-btn';
-            if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
-        });
-
-        document.getElementById('taskStoreWrap').style.display = 'none';
-        document.getElementById('taskResponsibleWrap').style.display = 'none';
-        document.getElementById('taskDescriptionWrap').style.display = 'none';
-        document.getElementById('taskFieldsGrid').style.display = 'grid';
-
-        renderNotes();
-        updateNotionLink();
-    }
-
     function addTask() {
         const taskName = document.getElementById('taskName').value.trim();
         if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
@@ -951,7 +901,6 @@
         if (!note) return;
         editingTaskId = id;
 
-        setTaskType(note.taskType || 'laboral');
         document.getElementById('taskName').value = note.text;
         document.getElementById('taskDueDate').value = note.dueDate || '';
         document.getElementById('taskDueTime').value = note.dueTime || '';
@@ -973,17 +922,15 @@
         const modeNotes = notes.filter(n => n.mode === currentMode);
 
         if (currentMode === 'pendientes') {
-            const filtered = modeNotes.filter(n => (n.taskType || 'laboral') === currentTaskType);
-            if (filtered.length === 0) {
-                const blockLabel = currentTaskType === 'personal' ? 'personales' : 'laborales';
+            if (modeNotes.length === 0) {
                 list.innerHTML = '';
                 const d = document.createElement('div');
                 d.className = 'empty-state';
-                d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay tareas ' + blockLabel + '.<br>Completa el formulario de abajo.</p>';
+                d.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>Aún no hay tareas.<br>Completa el formulario de abajo.</p>';
                 list.appendChild(d);
                 return;
             }
-            list.innerHTML = [...filtered].reverse().map(renderTaskCard).join('');
+            list.innerHTML = [...modeNotes].reverse().map(renderTaskCard).join('');
             return;
         }
 
@@ -1073,8 +1020,6 @@
         const managerName = currentMode === 'recorrido' ? document.getElementById('managerName').value.trim() : '';
         const meetingTopic = currentMode === 'reunion' ? document.getElementById('meetingTopic').value.trim() : '';
         const meetingParticipants = currentMode === 'reunion' ? document.getElementById('meetingParticipants').value.trim() : '';
-        const podcastTitle = currentMode === 'podcast' ? document.getElementById('podcastTitle').value.trim() : '';
-        const podcastGuest = currentMode === 'podcast' ? document.getElementById('podcastGuest').value.trim() : '';
         const now = new Date();
         const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
@@ -1084,8 +1029,6 @@
         if (managerName) html += '<p><strong>👤 Administrador:</strong> ' + escapeHtml(managerName) + '</p>';
         if (meetingTopic) html += '<p><strong>📌 Asunto:</strong> ' + escapeHtml(meetingTopic) + '</p>';
         if (meetingParticipants) html += '<p><strong>👥 Participantes:</strong> ' + escapeHtml(meetingParticipants) + '</p>';
-        if (podcastTitle) html += '<p><strong>🎙️ Podcast:</strong> ' + escapeHtml(podcastTitle) + '</p>';
-        if (podcastGuest) html += '<p><strong>🗣️ Invitado:</strong> ' + escapeHtml(podcastGuest) + '</p>';
         html += '<p><strong>📝 Total:</strong> ' + modeNotes.length + '</p></div>';
 
         cfg.categories.forEach(cat => {
@@ -1101,14 +1044,14 @@
 
         document.getElementById('modalBody').innerHTML = html;
         document.getElementById('modalOverlay').classList.add('visible');
-        buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg, podcastTitle, podcastGuest);
+        buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg);
 
         if (currentMode === 'recorrido' && selectedAdminPhone) {
             document.getElementById('whatsappNumber').value = '+57' + selectedAdminPhone;
         }
         updateWhatsAppLink();
 
-        if (currentMode === 'reunion' || currentMode === 'recorrido' || currentMode === 'podcast') {
+        if (currentMode === 'reunion' || currentMode === 'recorrido') {
             sendToNotion();
         }
     }
@@ -1117,35 +1060,22 @@
         const now = new Date();
         const dateStr = now.toLocaleDateString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-        const laboral = taskNotes.filter(n => (n.taskType || 'laboral') === 'laboral');
-        const personal = taskNotes.filter(n => n.taskType === 'personal');
 
         let html = '<div class="summary-meta"><p><strong>📅 Fecha:</strong> ' + dateStr + '</p><p><strong>🕐 Hora:</strong> ' + timeStr + '</p><p><strong>✅ Tipo:</strong> Pendientes</p><p><strong>📝 Total:</strong> ' + taskNotes.length + '</p></div>';
 
         let t = '✅ *RESUMEN — PENDIENTES*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n📝 Total: ' + taskNotes.length + '\n━━━━━━━━━━━━━━━━━━\n\n';
 
-        [{ label: '💼 Laboral', items: laboral }, { label: '🏠 Personal', items: personal }].forEach(group => {
-            if (group.items.length === 0) return;
-            html += '<div class="summary-section"><h3 class="neutral">' + group.label + ' (' + group.items.length + ')</h3>';
-            t += '*' + group.label.toUpperCase() + ' (' + group.items.length + ')*\n';
-            group.items.forEach((n, i) => {
-                const doneTag = n.completed ? ' ✅' : '';
-                html += '<div class="summary-item"' + (n.completed ? ' style="text-decoration:line-through;opacity:0.6"' : '') + '><strong>' + escapeHtml(n.text) + '</strong>' + doneTag;
-                if (n.store) html += '<br>🏪 ' + escapeHtml(n.store);
-                if (n.dueDate) html += '<br>📅 ' + formatDateEs(n.dueDate);
-                if (n.responsible) html += '<br>👤 ' + escapeHtml(n.responsible);
-                if (n.description) html += '<br>📝 ' + escapeHtml(n.description);
-                html += '</div>';
-
-                t += (i + 1) + '. ' + (n.completed ? '✅ ' : '') + n.text + '\n';
-                if (n.store) t += '   🏪 ' + n.store + '\n';
-                if (n.dueDate) t += '   📅 ' + formatDateEs(n.dueDate) + '\n';
-                if (n.responsible) t += '   👤 ' + n.responsible + '\n';
-                if (n.description) t += '   📝 ' + n.description + '\n';
-            });
+        html += '<div class="summary-section"><h3 class="neutral">✅ Tareas (' + taskNotes.length + ')</h3>';
+        taskNotes.forEach((n, i) => {
+            const doneTag = n.completed ? ' ✅' : '';
+            html += '<div class="summary-item"' + (n.completed ? ' style="text-decoration:line-through;opacity:0.6"' : '') + '><strong>' + escapeHtml(n.text) + '</strong>' + doneTag;
+            if (n.dueDate) html += '<br>📅 ' + formatDateEs(n.dueDate);
             html += '</div>';
-            t += '\n';
+
+            t += (i + 1) + '. ' + (n.completed ? '✅ ' : '') + n.text + '\n';
+            if (n.dueDate) t += '   📅 ' + formatDateEs(n.dueDate) + '\n';
         });
+        html += '</div>';
 
         document.getElementById('modalBody').innerHTML = html;
         document.getElementById('modalOverlay').classList.add('visible');
@@ -1155,14 +1085,12 @@
         sendToNotion();
     }
 
-    function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg, podcastTitle, podcastGuest) {
+    function buildPlainText(dateStr, timeStr, storeName, managerName, meetingTopic, meetingParticipants, modeNotes, cfg) {
         let t = cfg.icon + ' *RESUMEN — ' + cfg.label.toUpperCase() + '*\n━━━━━━━━━━━━━━━━━━\n📅 Fecha: ' + dateStr + '\n🕐 Hora: ' + timeStr + '\n';
         if (storeName) t += '🏪 Tienda: ' + storeName + '\n';
         if (managerName) t += '👤 Administrador: ' + managerName + '\n';
         if (meetingTopic) t += '📌 Asunto: ' + meetingTopic + '\n';
         if (meetingParticipants) t += '👥 Participantes: ' + meetingParticipants + '\n';
-        if (podcastTitle) t += '🎙️ Podcast: ' + podcastTitle + '\n';
-        if (podcastGuest) t += '🗣️ Invitado: ' + podcastGuest + '\n';
         t += '📝 Total: ' + modeNotes.length + '\n━━━━━━━━━━━━━━━━━━\n\n';
         cfg.categories.forEach(cat => {
             const items = modeNotes.filter(n => n.category === cat.key);
@@ -1187,7 +1115,7 @@
         let html = '<div class="summary-meta"><p><strong>📅 Agenda del día:</strong> ' + dateStr + '</p><p><strong>🕐 Generado:</strong> ' + timeStr + '</p><p><strong>📝 Total registros:</strong> ' + notes.length + '</p></div>';
         let t = '📅 *AGENDA DEL DÍA*\n━━━━━━━━━━━━━━━━━━\n' + dateStr + '\n━━━━━━━━━━━━━━━━━━\n\n';
 
-        ['recorrido', 'reunion', 'pendientes', 'podcast'].forEach(modeKey => {
+        ['recorrido', 'reunion', 'pendientes'].forEach(modeKey => {
             const modeNotes = notes.filter(n => n.mode === modeKey);
             if (modeNotes.length === 0) return;
             const cfg = modeConfig[modeKey];
@@ -1247,15 +1175,11 @@
 
         // Pendientes: Laboral → fila por tarea en Cosas por hacer; Personal → fila por tarea en Pendientes Personales
         if (!isDailySummary && currentMode === 'pendientes') {
-            const allTasks = notes.filter(n => n.mode === 'pendientes');
-            const laboral = allTasks.filter(n => (n.taskType || 'laboral') === 'laboral').map(n => ({
+            const allTasks = notes.filter(n => n.mode === 'pendientes').map(n => ({
                 text: n.text, dueDate: n.dueDate || '', dueTime: n.dueTime || '', responsible: n.responsible || '', description: n.description || '', store: n.store || '', completed: !!n.completed
             }));
-            const personal = allTasks.filter(n => n.taskType === 'personal').map(n => ({
-                text: n.text, dueDate: n.dueDate || '', dueTime: n.dueTime || '', responsible: n.responsible || '', description: n.description || '', completed: !!n.completed
-            }));
 
-            if (laboral.length === 0 && personal.length === 0) {
+            if (allTasks.length === 0) {
                 showToast('⚠️ No hay tareas para enviar');
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
@@ -1263,54 +1187,16 @@
             }
 
             const dateISO = new Date().toISOString().split('T')[0];
-            const params = new URLSearchParams({ dateISO: dateISO });
-            if (laboral.length) params.set('tasks', JSON.stringify(laboral));
-            if (personal.length) params.set('personalTasks', JSON.stringify(personal));
+            const params = new URLSearchParams({ dateISO: dateISO, tasks: JSON.stringify(allTasks) });
 
             try {
                 const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
                 const data = await response.json();
-                const parts = [];
-                if (data.laboral) parts.push(data.laboral.count + ' laboral' + (data.laboral.count !== 1 ? 'es' : '') + ' → Cosas por hacer');
-                if (data.personal) parts.push(data.personal.count + ' personal' + (data.personal.count !== 1 ? 'es' : '') + ' → Pendientes Personales');
-                if (data.ok) {
-                    showToast('✅ ' + (parts.join(' · ') || 'Enviado'));
+                if (data.ok && data.laboral) {
+                    showToast('✅ ' + data.laboral.count + ' tarea' + (data.laboral.count !== 1 ? 's' : '') + ' → Cosas por hacer');
                 } else {
                     showToast('⚠️ Algo falló al enviar, revisa Notion');
-                    console.error('Notion pending split error', data);
-                }
-            } catch (err) {
-                showToast('⚠️ Error al conectar con el puente de Notion');
-                console.error(err);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-            return;
-        }
-
-        // Podcast → página en "Resumen Podcast — OpsNotes" (ESPACIO PERSONAL)
-        if (!isDailySummary && currentMode === 'podcast') {
-            const dateISO = new Date().toISOString().split('T')[0];
-            const podcastTitle = document.getElementById('podcastTitle').value.trim();
-            const podcastGuest = document.getElementById('podcastGuest').value.trim();
-            const pageTitle = (podcastTitle || 'Podcast') + (podcastGuest ? ' — ' + podcastGuest : '');
-
-            try {
-                const params = new URLSearchParams({
-                    podcastTitle: podcastTitle,
-                    podcastGuest: podcastGuest,
-                    dateISO: dateISO,
-                    title: pageTitle,
-                    content: summaryText
-                });
-                const response = await fetch(GAS_NOTION_BRIDGE_URL + '?' + params.toString());
-                const data = await response.json();
-                if (data.ok) {
-                    showToast('✅ Enviado a Notion — Resumen Podcast');
-                } else {
-                    showToast('⚠️ Notion: ' + (data.error || 'error desconocido'));
-                    console.error('Notion podcast error', data);
+                    console.error('Notion pending error', data);
                 }
             } catch (err) {
                 showToast('⚠️ Error al conectar con el puente de Notion');
