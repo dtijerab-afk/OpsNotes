@@ -56,6 +56,24 @@
             --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
         }
+        body.dark-mode {
+            --success-bg: rgba(5,150,105,0.18);
+            --danger-bg: rgba(220,38,38,0.2);
+            --neutral-bg: rgba(148,163,184,0.15);
+            --warning-bg: rgba(217,119,6,0.2);
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.3);
+        }
+        .dark-toggle { background: rgba(255,255,255,0.15); border: none; color: white; width: 36px; height: 36px; border-radius: 10px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background: var(--card); color: var(--text); }
+        body.dark-mode input::placeholder, body.dark-mode textarea::placeholder { color: var(--text-light); }
+        body.dark-mode .wa-link-area { background: rgba(37,211,102,0.15); }
+        body.dark-mode .wa-link-area p, body.dark-mode .wa-link-area .wa-fallback { color: #6ee7a0; }
         body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 100px; }
         .header { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-lg); }
         .header-top { display: flex; align-items: center; justify-content: space-between; }
@@ -274,7 +292,10 @@
             </h1>
             <div class="header-subtitle">Notas de Operaciones — Megatiendas</div>
         </div>
-        <div class="note-count" id="noteCount">0 notas</div>
+        <div style="display:flex; align-items:center; gap:8px">
+            <button class="dark-toggle" id="darkModeBtn" onclick="toggleDarkMode()" title="Modo oscuro">🌙</button>
+            <div class="note-count" id="noteCount">0 notas</div>
+        </div>
     </div>
     <a id="notionLinkBtn" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 12px;background:rgba(255,255,255,0.15);border-radius:8px;color:white;text-decoration:none;font-size:0.75rem;font-weight:600">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.213.98l14.523-.84c.84-.046.933-.56.933-1.166V6.354c0-.606-.233-.933-.746-.887l-15.177.887c-.56.047-.746.327-.746.933zm14.337.746c.093.42 0 .84-.42.887l-.7.14v10.264c-.606.327-1.166.514-1.633.514-.746 0-.933-.234-1.492-.933l-4.577-7.186v6.952l1.446.327s0 .84-1.166.84l-3.22.187c-.093-.187 0-.653.327-.746l.84-.233V9.854l-1.166-.093c-.093-.42.14-1.026.793-1.073l3.454-.233 4.764 7.279V9.34l-1.213-.14c-.093-.514.28-.887.746-.933z"/></svg>
@@ -404,15 +425,15 @@
             </div>
             <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📋 Nombre de la tarea</label>
             <textarea class="text-input" id="taskName" placeholder="Ej: Revisar inventario de Fruver..." rows="2" style="width:100%;margin-bottom:12px"></textarea>
-            <div id="taskFieldsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div id="taskFieldsGrid" style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px">
                 <div>
-                    <label id="taskDueDateLabel" style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite *</label>
+                    <label id="taskDueDateLabel" style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📅 Fecha límite (opcional)</label>
                     <div style="display:flex; gap:6px">
-                        <input type="date" id="taskDueDate" required style="flex:1;min-width:0;padding:10px 8px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit">
+                        <input type="date" id="taskDueDate" style="flex:1;min-width:0;padding:10px 8px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit">
                         <input type="time" id="taskDueTime" title="Hora (opcional) — para el recordatorio en Google Calendar" style="flex:1;min-width:0;padding:10px 8px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit">
                     </div>
                 </div>
-                <div id="taskResponsibleWrap">
+                <div id="taskResponsibleWrap" style="display:none">
                     <label style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">👤 Responsable</label>
                     <input type="text" id="taskResponsible" placeholder="Ej: Carlos" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:0.9rem;font-family:inherit">
                 </div>
@@ -571,12 +592,12 @@
     const storeAdmins = {
         'Único': { principal: 'Zeudy Otero', principalPhone: '3013503220', comercial: 'Manuel Cortina', comercialPhone: '3014110857' },
         'Calle 30': { principal: 'Rosny Maury', principalPhone: '3005472183', comercial: 'Ronald Montaño', comercialPhone: '3011208880' },
-        'Soledad': { principal: 'Dorlies Marchenas', principalPhone: '3016714287', comercial: 'Alexander Briceño', comercialPhone: '3044988768' },
+        'Soledad': { principal: 'Dorlies Marchenas', principalPhone: '3016714287' },
         'Alkarawi': { principal: 'Leonor Rodríguez', principalPhone: '3014339137', comercial: 'Genny Hoyos', comercialPhone: '3102889515' },
         'Bostón': { principal: 'Juliana Charrys', principalPhone: '3046735115', comercial: 'Julio César Martínez', comercialPhone: '3103390484' },
         'Santo Tomás': { principal: 'Sandra Salgado', principalPhone: '3017253767', comercial: 'Robin Mercado', comercialPhone: '3023536010' },
         'Nuestro': { principal: 'Mauricio Escorcia', principalPhone: '3015555814', comercial: 'Miller Orozco', comercialPhone: '3144467131' },
-        'Villacampestre': { principal: 'Rosa Payares', principalPhone: '3108423212', comercial: 'José Medellín', comercialPhone: '3102377861' }
+        'Villacampestre': { principal: 'Rosa Payares', principalPhone: '3108423212' }
     };
     let selectedAdminPhone = '';
 
@@ -604,9 +625,10 @@
         const admins = storeAdmins[select.value];
         selectedAdminPhone = '';
         if (admins) {
-            choiceRow.innerHTML =
-                '<button class="sentiment-btn" data-name="' + admins.principal + '" data-phone="' + admins.principalPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.principal + ' (Principal)</button>' +
-                '<button class="sentiment-btn" data-name="' + admins.comercial + '" data-phone="' + admins.comercialPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.comercial + ' (Comercial)</button>';
+            choiceRow.innerHTML = '<button class="sentiment-btn" data-name="' + admins.principal + '" data-phone="' + admins.principalPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.principal + ' (Principal)</button>';
+            if (admins.comercial) {
+                choiceRow.innerHTML += '<button class="sentiment-btn" data-name="' + admins.comercial + '" data-phone="' + admins.comercialPhone + '" onclick="chooseAdmin(this)">👤 ' + admins.comercial + ' (Comercial)</button>';
+            }
             choiceWrap.style.display = 'block';
             document.getElementById('managerNameWrap').style.display = 'none';
         } else {
@@ -865,7 +887,7 @@
         document.getElementById('taskStoreWrap').style.display = 'none';
         document.getElementById('taskResponsibleWrap').style.display = 'none';
         document.getElementById('taskDescriptionWrap').style.display = 'none';
-        document.getElementById('taskFieldsGrid').style.display = 'none';
+        document.getElementById('taskFieldsGrid').style.display = 'grid';
 
         renderNotes();
         updateNotionLink();
@@ -874,11 +896,15 @@
     function addTask() {
         const taskName = document.getElementById('taskName').value.trim();
         if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
+        const dueDate = document.getElementById('taskDueDate').value;
+        const dueTime = document.getElementById('taskDueTime').value;
 
         if (editingTaskId) {
             const existing = notes.find(n => n.id === editingTaskId);
             if (existing) {
                 existing.text = taskName;
+                existing.dueDate = dueDate || '';
+                existing.dueTime = dueTime || '';
                 existing.taskType = currentTaskType;
             }
             editingTaskId = null;
@@ -893,8 +919,8 @@
         notes.push({
             id: Date.now(),
             text: taskName,
-            dueDate: '',
-            dueTime: '',
+            dueDate: dueDate || '',
+            dueTime: dueTime || '',
             responsible: '',
             description: '',
             store: '',
@@ -927,6 +953,8 @@
 
         setTaskType(note.taskType || 'laboral');
         document.getElementById('taskName').value = note.text;
+        document.getElementById('taskDueDate').value = note.dueDate || '';
+        document.getElementById('taskDueTime').value = note.dueTime || '';
         document.getElementById('taskName').focus();
         showToast('✏️ Editando tarea — modifica y toca "Agregar Tarea" para guardar');
     }
@@ -1436,7 +1464,24 @@
         }
     }
 
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('opsnotes_dark', isDark ? '1' : '0');
+        document.getElementById('darkModeBtn').textContent = isDark ? '☀️' : '🌙';
+    }
+
+    function initDarkMode() {
+        try {
+            if (localStorage.getItem('opsnotes_dark') === '1') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeBtn').textContent = '☀️';
+            }
+        } catch (e) { /* localStorage no disponible en este entorno */ }
+    }
+
     (async function init() {
+        initDarkMode();
         await loadNotes();
         setMode('recorrido');
         if (notes.length > 0) {
