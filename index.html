@@ -862,12 +862,10 @@
             if (b.dataset.type === type) b.classList.add('active-' + (type === 'personal' ? 'positive' : 'neutral'));
         });
 
-        const isLaboral = type === 'laboral';
-        document.getElementById('taskStoreWrap').style.display = isLaboral ? 'block' : 'none';
+        document.getElementById('taskStoreWrap').style.display = 'none';
         document.getElementById('taskResponsibleWrap').style.display = 'none';
-        document.getElementById('taskDescriptionWrap').style.display = isLaboral ? 'block' : 'none';
-        document.getElementById('taskFieldsGrid').style.gridTemplateColumns = '1fr';
-        document.getElementById('taskDueDateLabel').textContent = isLaboral ? '📅 Fecha de entrega *' : '📅 Fecha límite *';
+        document.getElementById('taskDescriptionWrap').style.display = 'none';
+        document.getElementById('taskFieldsGrid').style.display = 'none';
 
         renderNotes();
         updateNotionLink();
@@ -876,23 +874,11 @@
     function addTask() {
         const taskName = document.getElementById('taskName').value.trim();
         if (!taskName) { showToast('⚠️ Escribe el nombre de la tarea'); return; }
-        const dueDate = document.getElementById('taskDueDate').value;
-        if (!dueDate) { showToast('⚠️ Elige la fecha límite de la tarea'); return; }
-        const dueTime = document.getElementById('taskDueTime').value;
-        const isLaboral = currentTaskType === 'laboral';
-        const responsible = '';
-        const description = isLaboral ? document.getElementById('taskDescription').value.trim() : '';
-        const store = isLaboral ? document.getElementById('taskStore').value : '';
 
         if (editingTaskId) {
             const existing = notes.find(n => n.id === editingTaskId);
             if (existing) {
                 existing.text = taskName;
-                existing.dueDate = dueDate || '';
-                existing.dueTime = dueTime || '';
-                existing.responsible = responsible;
-                existing.description = description;
-                existing.store = store;
                 existing.taskType = currentTaskType;
             }
             editingTaskId = null;
@@ -907,11 +893,11 @@
         notes.push({
             id: Date.now(),
             text: taskName,
-            dueDate: dueDate || '',
-            dueTime: dueTime || '',
-            responsible: responsible,
-            description: description,
-            store: store,
+            dueDate: '',
+            dueTime: '',
+            responsible: '',
+            description: '',
+            store: '',
             taskType: currentTaskType,
             mode: 'pendientes',
             cls: 'neutral',
@@ -941,12 +927,6 @@
 
         setTaskType(note.taskType || 'laboral');
         document.getElementById('taskName').value = note.text;
-        document.getElementById('taskDueDate').value = note.dueDate || '';
-        document.getElementById('taskDueTime').value = note.dueTime || '';
-        document.getElementById('taskDescription').value = note.description || '';
-        if (note.taskType === 'laboral' && document.getElementById('taskStore')) {
-            document.getElementById('taskStore').value = note.store || '';
-        }
         document.getElementById('taskName').focus();
         showToast('✏️ Editando tarea — modifica y toca "Agregar Tarea" para guardar');
     }
